@@ -17,6 +17,8 @@ new class extends Component {
 
     public bool $myModal1 = false;
 
+    public bool $myModal2 = false;
+
     public string $search = '';
 
     public bool $drawer = false;
@@ -26,6 +28,10 @@ new class extends Component {
     public string $customer_name, $customer_type, $transaction_date, $paid, $pay_status, $change_return, $staff_name, $staff_id, $transaction_pay_type;
 
     public array $sortBy = ['column' => 'id', 'direction' => 'asc'];
+
+    public $selectedMetodePembayaran = '';
+
+    public $grandTotal = 0;
     //
     public function products()
     {
@@ -81,6 +87,7 @@ new class extends Component {
                     'staff_name' => 0,
                     'staff_id' => 0,
                     'transaction_pay_type' => $this->transaction_pay_type,
+                    'created_at' => date('Y-m-d H:i:s')
                 ];
 
                 $trans_id = Transactions::insertGetId($data);
@@ -96,7 +103,13 @@ new class extends Component {
                     'product_price' => Product::find($id)->customer_price,
                     'product_subtotal' => Product::find($id)->customer_price,
                     'created_by' => Auth::user()->id,
+                    'created_at' => date('Y-m-d H:i:s')
                 ]);
+
+                $grandTotal = TransactionDetails::query()
+                    ->where('transaction_id', $trans_id)
+                    ->selectRaw("SUM(product_qty * product_price) as grand_total")
+                    ->first()->grand_total;
 
             } catch (\Exception $e) {
                 Log::debug(json_encode($e->getMessage()));
@@ -113,8 +126,16 @@ new class extends Component {
                 'product_price' => Product::find($id)->customer_price,
                 'product_subtotal' => Product::find($id)->customer_price,
                 'created_by' => Auth::user()->id,
+                'created_at' => date('Y-m-d H:i:s')
             ]);
+
+            $grandTotal = TransactionDetails::query()
+                ->where('transaction_id', $this->hidden_trans_id)
+                ->selectRaw("SUM(product_qty * product_price) as grand_total")
+                ->first()->grand_total;
         }
+        $this->grandTotal = number_format($grandTotal, 0, ',', '.');
+
         $this->myModal1 = false;
     }
 
@@ -132,6 +153,12 @@ new class extends Component {
             'headers' => $this->headers(),
             'headersDetTrans' => $this->headersDetTrans(),
             'detailTrans' => $this->detailTrans(),
+            'metodePembayaran' => [
+                ['id' => 1, 'name' => 'Tunai'],
+                ['id' => 2, 'name' => 'Bank'],
+                ['id' => 3, 'name' => 'QRIS'],
+            ],
+            'grandTotal' => number_format($this->grandTotal, 0, ',', '.'),
         ];
     }
 
@@ -139,11 +166,24 @@ new class extends Component {
     {
         $transdet = TransactionDetails::find($det_trans_id);
         $price = $transdet->product_price;
+        $trans_id = $transdet->transaction_id;
 
         $transdet->update([
             'product_qty' => $value,
             'product_subtotal' => $value * $price,
         ]);
+
+        $grandTotal = TransactionDetails::query()
+            ->where('transaction_id', $trans_id)
+            ->selectRaw("SUM(product_qty * product_price) as grand_total")
+            ->first()->grand_total;
+     
+        $this->grandTotal = number_format($grandTotal, 0, ',', '.');
+    }
+
+    public function calculateChange()
+    {
+        $this->change_return = $this->grandTotal - $this->paid;
     }
 
     // Delete action
@@ -160,7 +200,7 @@ new class extends Component {
             <?php /* <div class="col-span-3">
 
 
-      </div> */ ?>
+    </div> */ ?>
 
             <x-modal wire:model="myModal1" title="Produk" subtitle="Pilih Produk" box-class="border">
                 <x-input placeholder="Search..." wire:model.live.debounce="search" clearable
@@ -179,13 +219,38 @@ new class extends Component {
                 </x-card>
             </x-modal>
 
+            <x-modal wire:model="myModal2" title="Bayar" subtitle="Pembayaran">
+                <x-form no-separator>
+                    <div class=" text-right"><sup>Rp</sup><span class="text-6xl">{{ $grandTotal }}</span></div>
+
+                    <x-input label="Nominal Pembayaran" wire:change="calculateChange" icon="o-currency-dollar" placeholder="Nilai Pembayaran" />
+                    <x-input label="Kembalian" icon="o-currency-dollar" placeholder="Nilai Pembayaran" wire:model="change_return"/>
+                    <x-input label="Nama Pelanggan" wire:model="customer_name" icon="o-user"/>
+                    <x-select label="Metode Pembayaran" wire:model="selectedMetodePembayaran"
+                        :options="$metodePembayaran" icon="o-bars-arrow-down" />
+                    <x-textarea label="Keterangan" wire:model="keterangan" />
+             
+                    {{-- Notice we are using now the `actions` slot from `x-form`, not from modal --}}
+                    <x-slot:actions>
+                        <x-button label="Batal" @click="$wire.myModal2 = false" />
+                        <x-button label="Bayar" class="btn-primary" />
+                    </x-slot:actions>
+                </x-form>
+            </x-modal>
+
             <div class="col-span-4">
                 <x-header title="Transaksi" separator progress-indicator>
                     <x-slot:actions>
+                        <div class="gap-3">
                         <x-button label="Tambah Item" @click="$wire.myModal1 = true" icon="o-plus"
                             class="btn-primary" />
+                        <x-button label="Bayar" @click="$wire.myModal2 = true" icon="o-paper-airplane"
+                            class="btn-success" />
+                        </div>    
                     </x-slot:actions>
                 </x-header>
+
+                <div class=" text-right"><sup>Rp</sup><span class="text-6xl">{{ $grandTotal }}</span></div>
                 {{-- <x-header title="" separator /> --}}
 
                 <div class="pt-3.5">
@@ -202,7 +267,7 @@ new class extends Component {
                                 wire:confirm="Are you sure?" spinner --}} {{-- class="btn-ghost btn-sm text-error" />
                             --}}
                             <x-button icon="o-trash" wire:click="delete({{ $product['id'] }})" spinner
-                                class="btn-ghost btn-sm text-error" wire:confirm="Anda ingin menghapus Item ini?"/>
+                                class="btn-ghost btn-sm text-error" wire:confirm="Anda ingin menghapus Item ini?" />
                             @endscope
                         </x-table>
                     </x-card>
@@ -211,8 +276,8 @@ new class extends Component {
             </div>
             <div class="col-span-2">
                 <div>
-                    <x-datetime label="Tanggal" wire:model="transaction_date" type="datetime-local" />
-                    <x-input label="Nama Pelanggan" wire:model="customer_name" />
+                   
+
                 </div>
             </div>
             <input type="hidden" value="{{ $hidden_trans_id }}">
