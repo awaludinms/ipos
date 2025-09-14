@@ -158,7 +158,7 @@ new class extends Component {
                 ['id' => 2, 'name' => 'Bank'],
                 ['id' => 3, 'name' => 'QRIS'],
             ],
-            'grandTotal' => number_format($this->grandTotal, 0, ',', '.'),
+            'grandTotal' => $this->grandTotal,
         ];
     }
 
