@@ -18,7 +18,7 @@ Route::get('/logout', function () {
  
 // Protected routes here
 Route::middleware('auth')->group(function () {
-    Volt::route('/', 'index');
+    Volt::route('/', 'product');
     Volt::route('/users', 'users.index');
     Volt::route('/users/create', 'users.create');
     Volt::route('/users/{user}/edit', 'users.edit');
