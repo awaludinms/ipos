@@ -131,16 +131,37 @@ new class extends Component {
             }
         } else {
             // $this->warning('----' . 'It is fake.', position: 'toast-bottom');
-
-            TransactionDetails::create([
-                'transaction_id' => $this->hidden_trans_id,
+            $exists = TransactionDetails::where([
                 'product_id' => $id,
-                'product_qty' => 1,
-                'product_price' => Product::find($id)->customer_price,
-                'product_subtotal' => Product::find($id)->customer_price,
-                'created_by' => Auth::user()->id,
-                'created_at' => date('Y-m-d H:i:s')
-            ]);
+                'transaction_id' => $this->hidden_trans_id,
+            ])
+                ->exists();
+
+            if (!$exists) {
+                TransactionDetails::create([
+                    'transaction_id' => $this->hidden_trans_id,
+                    'product_id' => $id,
+                    'product_qty' => 1,
+                    'product_price' => Product::find($id)->customer_price,
+                    'product_subtotal' => Product::find($id)->customer_price,
+                    'created_by' => Auth::user()->id,
+                    'created_at' => date('Y-m-d H:i:s')
+                ]);
+            } else {
+
+                $tr = TransactionDetails::where([
+                    'product_id' => $id,
+                    'transaction_id' => $this->hidden_trans_id
+                ])->first();
+
+                $last_qty = $tr->product_qty;
+                $subtotal = ($last_qty + 1) * Product::find($id)->customer_price;
+
+                $tr->update([
+                    'product_qty' => ($last_qty + 1),
+                    'product_subtotal' => $subtotal,
+                ]);
+            }
 
             $grandTotal = TransactionDetails::query()
                 ->where('transaction_id', $this->hidden_trans_id)
@@ -181,23 +202,25 @@ new class extends Component {
 
     public function update($det_trans_id, $value)
     {
-        $transdet = TransactionDetails::find($det_trans_id);
-        $price = $transdet->product_price;
-        $trans_id = $transdet->transaction_id;
+        // if ($value > 0) {
+            $transdet = TransactionDetails::find($det_trans_id);
+            $price = $transdet->product_price;
+            $trans_id = $transdet->transaction_id;
 
-        $transdet->update([
-            'product_qty' => $value,
-            'product_subtotal' => $value * $price,
-        ]);
+            $transdet->update([
+                'product_qty' => abs($value),
+                'product_subtotal' => abs($value) * $price,
+            ]);
 
-        $grandTotal = TransactionDetails::query()
-            ->where('transaction_id', $trans_id)
-            ->selectRaw("SUM(product_qty * product_price) as grand_total")
-            ->first()->grand_total;
+            $grandTotal = TransactionDetails::query()
+                ->where('transaction_id', $trans_id)
+                ->selectRaw("SUM(product_qty * product_price) as grand_total")
+                ->first()->grand_total;
 
-        $this->grandTotalCalc = $grandTotal;
+            $this->grandTotalCalc = $grandTotal;
 
-        $this->grandTotal = number_format($grandTotal, 0, ',', '.');
+            $this->grandTotal = number_format($grandTotal, 0, ',', '.');
+        // }
     }
 
     public function calculateChange()
@@ -208,7 +231,7 @@ new class extends Component {
     // Delete action
     public function delete($id): void
     {
-        $this->warning("Will delete #$id", 'It is fake.', position: 'toast-bottom');
+        $this->warning("Will delete #$id", 'deleted item.', position: 'toast-bottom');
         TransactionDetails::find($id)->delete();
     }
 
@@ -241,7 +264,8 @@ new class extends Component {
 
                 <!-- TABLE  -->
                 <x-card shadow>
-                    <x-table with-pagination :headers="$headers" :rows="$products" :sort-by="$sortBy" @row-click="$wire.add($event.detail.id)">
+                    <x-table with-pagination :headers="$headers" :rows="$products" :sort-by="$sortBy"
+                        @row-click="$wire.add($event.detail.id)">
                         @scope('actions', $product)
                         {{-- <x-button icon="o-pencil" wire:click="delete({{ $product['id'] }})"
                             wire:confirm="Are you sure?" spinner --}} {{-- class="btn-ghost btn-sm text-error" /> --}}
@@ -296,7 +320,7 @@ new class extends Component {
                         <x-table :headers="$headersDetTrans" :rows="$detailTrans" :sort-by="$sortBy">
                             @scope('cell_product_qty', $detTrans)
                             <x-input class="w-10" wire:change="update({{ $detTrans->id }}, $event.target.value)"
-                                type="number" value="{{ $detTrans->product_qty }}" />
+                                type="number" value="{{ $detTrans->product_qty }}" min="1" />
                             @endscope
 
                             @scope('actions', $product)
