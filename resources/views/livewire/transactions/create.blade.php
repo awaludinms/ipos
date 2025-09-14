@@ -1,10 +1,12 @@
 <?php
 
+use App\Models\Customer;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\Transactions;
 use App\Models\TransactionDetails;
 use Livewire\Volt\Component;
+use Livewire\Attributes\Rule;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Livewire\WithPagination;
@@ -19,6 +21,8 @@ new class extends Component {
     public bool $myModal1 = false;
 
     public bool $myModal2 = false;
+
+    public bool $myModalPelanggan = false;
 
     public string $search = '';
 
@@ -45,6 +49,16 @@ new class extends Component {
 
     // Options list
     public Collection $usersSearchable;
+
+    #[Rule('required')]
+    public string $name = '';
+
+    #[Rule('required')]
+    public string $phone = '';
+
+    #[Rule('required')]
+    public string $address = '';
+
     //
     public function products()
     {
@@ -203,23 +217,23 @@ new class extends Component {
     public function update($det_trans_id, $value)
     {
         // if ($value > 0) {
-            $transdet = TransactionDetails::find($det_trans_id);
-            $price = $transdet->product_price;
-            $trans_id = $transdet->transaction_id;
+        $transdet = TransactionDetails::find($det_trans_id);
+        $price = $transdet->product_price;
+        $trans_id = $transdet->transaction_id;
 
-            $transdet->update([
-                'product_qty' => abs($value),
-                'product_subtotal' => abs($value) * $price,
-            ]);
+        $transdet->update([
+            'product_qty' => abs($value),
+            'product_subtotal' => abs($value) * $price,
+        ]);
 
-            $grandTotal = TransactionDetails::query()
-                ->where('transaction_id', $trans_id)
-                ->selectRaw("SUM(product_qty * product_price) as grand_total")
-                ->first()->grand_total;
+        $grandTotal = TransactionDetails::query()
+            ->where('transaction_id', $trans_id)
+            ->selectRaw("SUM(product_qty * product_price) as grand_total")
+            ->first()->grand_total;
 
-            $this->grandTotalCalc = $grandTotal;
+        $this->grandTotalCalc = $grandTotal;
 
-            $this->grandTotal = number_format($grandTotal, 0, ',', '.');
+        $this->grandTotal = number_format($grandTotal, 0, ',', '.');
         // }
     }
 
@@ -239,14 +253,26 @@ new class extends Component {
     public function search(string $value = '')
     {
         // Besides the search results, you must include on demand selected option
-        $selectedOption = User::where('id', $this->user_searchable_id)->get();
+        $selectedOption = Customer::where('id', $this->user_searchable_id)->get();
 
-        $this->usersSearchable = User::query()
+        $this->usersSearchable = Customer::query()
             ->where('name', 'like', "%$value%")
             ->take(5)
             ->orderBy('name')
             ->get()
             ->merge($selectedOption);     // <-- Adds selected option
+    }
+
+    public function savePelanggan()
+    {
+        Customer::create([
+            'name' => $this->name,
+            'phone' => $this->phone,
+            'address' => $this->address,
+        ]);
+
+        $this->search();
+        $this->myModalPelanggan = false;
     }
 }; ?>
 
@@ -258,7 +284,8 @@ new class extends Component {
 
 </div> */ ?>
 
-            <x-modal wire:model="myModal1" title="Produk" subtitle="Pilih Produk" box-class="border">
+            <x-modal wire:model="myModal1" title="Produk" subtitle="Pilih Produk" box-class="border"
+                class="backdrop-blur">
                 <x-input placeholder="Search..." wire:model.live.debounce="search" clearable
                     icon="o-magnifying-glass" />
 
@@ -276,7 +303,7 @@ new class extends Component {
                 </x-card>
             </x-modal>
 
-            <x-modal wire:model="myModal2" title="Bayar" subtitle="Pembayaran">
+            <x-modal wire:model="myModal2" title="Bayar" subtitle="Pembayaran" class="backdrop-blur">
                 <x-form no-separator>
                     <div class=" text-right"><sup>Rp</sup><span class="text-6xl">{{ $grandTotal }}</span></div>
 
@@ -284,9 +311,17 @@ new class extends Component {
                         placeholder="Nilai Pembayaran" prefix="Rp" />
                     <x-input readonly label="Kembalian" placeholder="Nilai Pembayaran" wire:model="change_return"
                         prefix="Rp" />
-                    <x-input label="Nama Pelanggan" wire:model="customer_name" icon="o-user" />
-                    <x-choices label="Searchable + Single" wire:model="user_searchable_id" :options="$usersSearchable"
-                        placeholder="Search ..." single searchable />
+                    <div class="grid grid-cols-7 gap-3">
+                        <div class="col-span-5">
+                            <x-choices label="Pelanggan" wire:model="user_searchable_id" :options="$usersSearchable"
+                                placeholder="Search ..." single searchable />
+                        </div>
+                        <div class="col-span-2 content-end text-right">
+                            <x-button class="mt-2" label="Tambah" @click="$wire.myModalPelanggan = true" icon="o-plus"
+                                class="btn-primary" />
+                        </div>
+                    </div>
+
                     <x-select label="Metode Pembayaran" wire:model="selectedMetodePembayaran"
                         :options="$metodePembayaran" icon="o-bars-arrow-down" />
                     <x-textarea label="Keterangan" wire:model="keterangan" />
@@ -299,6 +334,21 @@ new class extends Component {
                 </x-form>
             </x-modal>
 
+            <x-modal wire:model="myModalPelanggan" title="Pelanggan" class="backdrop-blur" subtitle="Tambah Pelanggan">
+                <x-form no-separator wire:submit="savePelanggan">
+
+                    <x-input label="Nama Pelanggan" wire:model="name" icon="o-user" />
+                    <x-input label="Nomor HP" wire:model="phone" icon="o-user" />
+                    <x-textarea label="Alamat" wire:model="address" />
+
+                    {{-- Notice we are using now the `actions` slot from `x-form`, not from modal --}}
+                    <x-slot:actions>
+                        <x-button label="Batal" @click="$wire.myModalPelanggan = false" />
+                        <x-button label="Simpan" class="btn-primary" spinner="save" type="submit" />
+                    </x-slot:actions>
+                </x-form>
+            </x-modal>
+
             <div class="col-span-4">
                 <x-header title="Transaksi" separator progress-indicator>
                     <x-slot:actions>
@@ -306,7 +356,7 @@ new class extends Component {
                             <x-button label="Tambah Item" @click="$wire.myModal1 = true" icon="o-plus"
                                 class="btn-primary" />
                             <x-button label="Bayar" @click="$wire.myModal2 = true" icon="o-paper-airplane"
-                                class="btn-success" />
+                                class="btn-success" spinner />
                         </div>
                     </x-slot:actions>
                 </x-header>
