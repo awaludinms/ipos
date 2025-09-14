@@ -52,7 +52,7 @@ new class extends Component {
 <div>
     <x-header title="Tambah Produk" separator />
 
-    <div class="w-1/2">
+    <div class="lg:w-1/2">
         <x-form wire:submit="save">
             <x-input label="Nama Produk" wire:model="product_name" />
             <div class="lg:grid grid-cols-6 gap-3">

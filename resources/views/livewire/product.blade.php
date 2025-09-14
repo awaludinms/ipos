@@ -7,9 +7,11 @@ use Livewire\Attributes\Title;
 use Livewire\Volt\Component;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\WithPagination;
+use Mary\Traits\Toast;
 
 new class extends Component {
     use WithPagination; 
+    use Toast;
 
     public string $search = '';
 
@@ -19,7 +21,7 @@ new class extends Component {
     //
     public function products()
     {
-        return Product::query()->selectRaw('id, product_name, customer_price as customer_price_formatted, reseller_price as reseller_price_formatted, product_type_id')
+        return Product::query()->selectRaw('id, product_name, customer_price, reseller_price, product_type_id')
             ->when($this->search, fn(Builder $q) => $q->where('product_name', 'like', "%$this->search%"))
             ->orderBy(...array_values($this->sortBy))
             ->paginate(10);
@@ -31,8 +33,8 @@ new class extends Component {
             ['key' => 'id', 'label' => '#', 'class' => 'w-1'],
             ['key' => 'product_name', 'label' => 'Nama Produk', 'class' => 'w-64'],
             // ['key' => 'buy_price', 'label' => 'Harga Beli', 'class' => 'w-20'],
-            ['key' => 'customer_price_formatted', 'label' => 'Harga Jual Customer', 'sortable' => false],
-            ['key' => 'reseller_price_formatted', 'label' => 'Harga Jual Reseller', 'sortable' => false],
+            ['key' => 'customer_price', 'label' => 'Harga Jual Customer', 'sortable' => false, 'format' => ['currency', '0,.', '']],
+            ['key' => 'reseller_price', 'label' => 'Harga Jual Reseller', 'sortable' => false, 'format' => ['currency', '0,.', '']],
             ['key' => 'product_type.name', 'label' => 'Kategori', 'sortable' => false],
         ];
     }
@@ -43,6 +45,19 @@ new class extends Component {
             'products' => $this->products(),
             'headers' => $this->headers()
         ];
+    }
+
+    // Delete action
+    public function delete($id): void
+    {
+        $product = Product::find($id);
+        $nama_product = $product->product_name;
+        try {
+            $product->delete();
+            $this->success("Data Produk " . $nama_product . " berhasil dihapus", 'Data berhasil dihapus', position: 'toast-bottom');
+        } catch (\Exception $e) {
+            $this->warning("Data Produk " . $nama_product . " gagal dihapus", 'Data berhasil dihapus', position: 'toast-bottom');
+        }
     }
 
 }; ?>
@@ -61,7 +76,7 @@ new class extends Component {
 
     <!-- TABLE  -->
     <x-card shadow>
-        <x-table :headers="$headers" :rows="$products" :sort-by="$sortBy" link="/products/{id}/edit">
+        <x-table with-pagination :headers="$headers" :rows="$products" :sort-by="$sortBy" link="/products/{id}/edit">
             @scope('actions', $user)
             {{-- <x-button icon="o-pencil" wire:click="delete({{ $user['id'] }})" wire:confirm="Are you sure?" spinner --}}
             {{-- class="btn-ghost btn-sm text-error" /> --}}
