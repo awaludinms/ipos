@@ -25,13 +25,19 @@ new class extends Component {
 
     public int $hidden_trans_id = -1;
 
-    public string $customer_name, $customer_type, $transaction_date, $paid, $pay_status, $change_return, $staff_name, $staff_id, $transaction_pay_type;
+    public string $customer_name, $customer_type, $transaction_date, $pay_status, $staff_name, $staff_id, $transaction_pay_type;
 
     public array $sortBy = ['column' => 'id', 'direction' => 'asc'];
 
     public $selectedMetodePembayaran = '';
 
     public $grandTotal = 0;
+
+    public $paid = 0;
+
+    public $change_return = 0;
+
+    public $grandTotalCalc = 0;
     //
     public function products()
     {
@@ -134,6 +140,7 @@ new class extends Component {
                 ->selectRaw("SUM(product_qty * product_price) as grand_total")
                 ->first()->grand_total;
         }
+        $this->grandTotalCalc = $grandTotal;
         $this->grandTotal = number_format($grandTotal, 0, ',', '.');
 
         $this->myModal1 = false;
@@ -159,6 +166,8 @@ new class extends Component {
                 ['id' => 3, 'name' => 'QRIS'],
             ],
             'grandTotal' => $this->grandTotal,
+            'grandTotalCalc' => $this->grandTotalCalc,
+
         ];
     }
 
@@ -178,12 +187,14 @@ new class extends Component {
             ->selectRaw("SUM(product_qty * product_price) as grand_total")
             ->first()->grand_total;
      
+        $this->grandTotalCalc = $grandTotal;
+
         $this->grandTotal = number_format($grandTotal, 0, ',', '.');
     }
 
     public function calculateChange()
     {
-        $this->change_return = $this->grandTotal - $this->paid;
+        $this->change_return = $this->paid - $this->grandTotalCalc;
     }
 
     // Delete action
@@ -223,8 +234,8 @@ new class extends Component {
                 <x-form no-separator>
                     <div class=" text-right"><sup>Rp</sup><span class="text-6xl">{{ $grandTotal }}</span></div>
 
-                    <x-input label="Nominal Pembayaran" wire:change="calculateChange" icon="o-currency-dollar" placeholder="Nilai Pembayaran" />
-                    <x-input label="Kembalian" icon="o-currency-dollar" placeholder="Nilai Pembayaran" wire:model="change_return"/>
+                    <x-input label="Nominal Pembayaran" wire:model="paid" wire:change="calculateChange" placeholder="Nilai Pembayaran" prefix="Rp" />
+                    <x-input label="Kembalian" placeholder="Nilai Pembayaran" wire:model="change_return" prefix="Rp"/>
                     <x-input label="Nama Pelanggan" wire:model="customer_name" icon="o-user"/>
                     <x-select label="Metode Pembayaran" wire:model="selectedMetodePembayaran"
                         :options="$metodePembayaran" icon="o-bars-arrow-down" />
