@@ -41,6 +41,9 @@ Route::middleware('auth')->group(function () {
  
      Volt::route('/transactions', 'transactions.index');
      Volt::route('/transactions/create', 'transactions.create');
+   
+    // Experiment
+    Volt::route('/exp', 'experiment.form');
     // ... more
 });
 
