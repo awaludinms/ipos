@@ -385,12 +385,12 @@ new class extends Component {
                 </div>
 
             </div>
-            <div class="col-span-2">
+            {{-- <div class="col-span-2">
                 <div>
 
 
                 </div>
-            </div>
+            </div> --}}
             <input type="hidden" value="{{ $hidden_trans_id }}">
         </div>
     </div>
