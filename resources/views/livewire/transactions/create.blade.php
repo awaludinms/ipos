@@ -320,7 +320,7 @@ new class extends Component {
         $this->search();
         $this->myModalPelanggan = false;
 
-        $this->success("Customer berhasil disimpan", "silahkan pilih pelanggan di pilihan reseller");
+        $this->success("Customer berhasil disimpan", "silahkan pilih pelanggan di pilihan customer");
 
     }
 
