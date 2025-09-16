@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Invoice\PrintInvoiceController;
 use App\Livewire\Welcome;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
@@ -41,9 +42,14 @@ Route::middleware('auth')->group(function () {
  
      Volt::route('/transactions', 'transactions.index');
      Volt::route('/transactions/create', 'transactions.create');
+     Volt::route('/transactions/create-reseller', 'transactions.create_reseller');
    
     // Experiment
     Volt::route('/exp', 'experiment.form');
+
+    // Print struk
+    Route::get('/print/{transaction}', [PrintInvoiceController::class, 'index']);
+    Route::get('/print-reseller/{transaction}', [PrintInvoiceController::class, 'reseller']);
     // ... more
 });
 

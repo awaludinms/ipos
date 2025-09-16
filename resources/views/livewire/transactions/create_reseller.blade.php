@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Customer;
+use App\Models\Reseller;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\Transactions;
@@ -37,7 +37,7 @@ new class extends Component {
 
     public bool $myModal2 = false;
 
-    public bool $myModalPelanggan = false;
+    public bool $myModalReseller = false;
 
     public bool $myModalProsesSelesai = false;
 
@@ -71,7 +71,7 @@ new class extends Component {
     //
     public function products()
     {
-        return Product::query()->selectRaw('id, product_name, customer_price, reseller_price, product_type_id')
+        return Product::query()->selectRaw('id, product_name, reseller_price, product_type_id')
             ->when($this->search, fn(Builder $q) => $q->where('product_name', 'like', "%$this->search%"))
             ->orderBy(...array_values($this->sortBy))
             ->paginate(5);
@@ -87,7 +87,7 @@ new class extends Component {
         return [
             ['key' => 'product_name', 'label' => 'Nama Produk', 'class' => 'w-64'],
             // ['key' => 'buy_price', 'label' => 'Harga Beli', 'class' => 'w-20'],
-            ['key' => 'customer_price', 'label' => 'Harga', 'sortable' => false, 'format' => ['currency', '0,.', '']],
+            ['key' => 'reseller_price', 'label' => 'Harga', 'sortable' => false, 'format' => ['currency', '0,.', '']],
             // ['key' => 'product_type.name', 'label' => 'Kategori', 'sortable' => false],
         ];
     }
@@ -115,7 +115,7 @@ new class extends Component {
                     'transaction_number' => date('YmdHis'),
                     'customer_name' => $this->customer_name != "" ? "-" : $this->customer_name,
                     'transaction_date' => $this->transaction_date,
-                    'customer_type' => 'customer',
+                    'customer_type' => 'reseller',
                     'grand_total' => 0,
                     'paid' => 0,
                     'pay_status' => 0,
@@ -136,8 +136,8 @@ new class extends Component {
                     'transaction_id' => $trans_id,
                     'product_id' => $id,
                     'product_qty' => 1,
-                    'product_price' => Product::find($id)->customer_price,
-                    'product_subtotal' => Product::find($id)->customer_price,
+                    'product_price' => Product::find($id)->reseller_price,
+                    'product_subtotal' => Product::find($id)->reseller_price,
                     'created_by' => Auth::user()->id,
                     'created_at' => date('Y-m-d H:i:s')
                 ]);
@@ -165,8 +165,8 @@ new class extends Component {
                     'transaction_id' => $this->hidden_trans_id,
                     'product_id' => $id,
                     'product_qty' => 1,
-                    'product_price' => Product::find($id)->customer_price,
-                    'product_subtotal' => Product::find($id)->customer_price,
+                    'product_price' => Product::find($id)->reseller_price,
+                    'product_subtotal' => Product::find($id)->reseller_price,
                     'created_by' => Auth::user()->id,
                     'created_at' => date('Y-m-d H:i:s')
                 ]);
@@ -178,7 +178,7 @@ new class extends Component {
                 ])->first();
 
                 $last_qty = $tr->product_qty;
-                $subtotal = ($last_qty + 1) * Product::find($id)->customer_price;
+                $subtotal = ($last_qty + 1) * Product::find($id)->reseller_price;
 
                 $tr->update([
                     'product_qty' => ($last_qty + 1),
@@ -289,9 +289,9 @@ new class extends Component {
     public function search(string $value = '')
     {
         // Besides the search results, you must include on demand selected option
-        $selectedOption = Customer::where('id', $this->user_searchable_id)->get();
+        $selectedOption = Reseller::where('id', $this->user_searchable_id)->get();
 
-        $this->usersSearchable = Customer::query()
+        $this->usersSearchable = Reseller::query()
             ->where('name', 'like', "%$value%")
             ->take(5)
             ->orderBy('name')
@@ -299,7 +299,7 @@ new class extends Component {
             ->merge($selectedOption);     // <-- Adds selected option
     }
 
-    public function savePelanggan()
+    public function saveReseller()
     {
         $this->validate([
             'name' => 'required',
@@ -311,17 +311,15 @@ new class extends Component {
             'address.required' => 'Alamat tidak boleh kosong',
         ]);
 
-        Customer::create([
+        Reseller::create([
             'name' => $this->name,
             'phone' => $this->phone,
             'address' => $this->address,
         ]);
 
         $this->search();
-        $this->myModalPelanggan = false;
-
-        $this->success("Customer berhasil disimpan", "silahkan pilih pelanggan di pilihan reseller");
-
+        $this->myModalReseller = false;
+        $this->success("Reseller berhasil disimpan", "silahkan pilih reseller di pilihan reseller");
     }
 
     public function saveTransaction()
@@ -332,7 +330,7 @@ new class extends Component {
                 Illuminate\Validation\Rule::notIn([0]),
             ],
         ], [
-            'user_searchable_id' => 'Pelanggan tidak boleh kosong',
+            'user_searchable_id' => 'Reseller tidak boleh kosong',
         ]);
 
         $transaction_state = 1;
@@ -406,11 +404,11 @@ new class extends Component {
                         prefix="Rp" />
                     <div class="grid grid-cols-7 gap-3">
                         <div class="col-span-5">
-                            <x-choices label="Pelanggan" wire:model="user_searchable_id" :options="$usersSearchable"
+                            <x-choices label="Reseller" wire:model="user_searchable_id" :options="$usersSearchable"
                                 placeholder="Search ..." single searchable />
                         </div>
                         <div class="col-span-2 content-end text-right">
-                            <x-button class="mt-2" label="Tambah" @click="$wire.myModalPelanggan = true" icon="o-plus"
+                            <x-button class="mt-2" label="Tambah" @click="$wire.myModalReseller = true" icon="o-plus"
                                 class="btn-primary" />
                         </div>
                     </div>
@@ -427,16 +425,16 @@ new class extends Component {
                 </x-form>
             </x-modal>
 
-            <x-modal wire:model="myModalPelanggan" title="Pelanggan" class="backdrop-blur" subtitle="Tambah Pelanggan">
-                <x-form no-separator wire:submit="savePelanggan">
+            <x-modal wire:model="myModalReseller" title="Reseller" class="backdrop-blur" subtitle="Tambah Reseller">
+                <x-form no-separator wire:submit="saveReseller">
 
-                    <x-input label="Nama Pelanggan" wire:model="name" icon="o-user" />
+                    <x-input label="Nama Reseller" wire:model="name" icon="o-user" />
                     <x-input label="Nomor HP" wire:model="phone" icon="o-user" />
                     <x-textarea label="Alamat" wire:model="address" />
 
                     {{-- Notice we are using now the `actions` slot from `x-form`, not from modal --}}
                     <x-slot:actions>
-                        <x-button label="Batal" @click="$wire.myModalPelanggan = false" />
+                        <x-button label="Batal" @click="$wire.myModalReseller = false" />
                         <x-button label="Simpan" class="btn-primary" spinner="save" type="submit" />
                     </x-slot:actions>
                 </x-form>
@@ -445,14 +443,14 @@ new class extends Component {
             <x-modal wire:model="myModalProsesSelesai" title="Proses Selesai" subtitle="Proses Pembayaran" box-class="border"
                 class="backdrop-blur">
                 <x-slot:actions>
-                    <a href="/print-reseller/{{ $hidden_trans_id }}" target="_blank" rel="noopener noreferrer"
+                    <a href="/print/{{ $hidden_trans_id }}" target="_blank" rel="noopener noreferrer"
                         class="btn btn-primary">Cetak</a>
                 </x-slot:actions>
             </x-modal>
 
 
             <div class="col-span-4">
-                <x-header title="Transaksi" separator progress-indicator>
+                <x-header title="Transaksi Reseller" separator progress-indicator>
                     <x-slot:actions>
                         <div class="gap-3">
                             @if ($transDone)

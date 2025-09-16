@@ -61,7 +61,8 @@
 
                 <x-menu-sub title="Transaksi" icon="o-cog-6-tooth">
                     <x-menu-item title="Daftar Transaksi" icon="o-square-3-stack-3d" link="/transactions/" />
-                    <x-menu-item title="Transaksi" icon="o-plus" link="/transactions/create" />
+                    <x-menu-item title="Transaksi Customer" icon="o-plus" link="/transactions/create" />
+                    <x-menu-item title="Transaksi Reseller" icon="o-plus" link="/transactions/create-reseller" />
                 </x-menu-sub>
                 
                 {{-- <x-menu-sub title="Settings" icon="o-cog-6-tooth">
