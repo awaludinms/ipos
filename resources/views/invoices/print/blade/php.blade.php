@@ -21,6 +21,9 @@
                 margin: 0px !important;
             }
         }
+        .tab {
+            padding-left: 12px;
+        }
     </style>
 </head>
 
@@ -28,7 +31,11 @@
     <table style="width:5cm !important;font-size:10pt !important;border-collapse:collapse;font-family:Arial;">
         <tr>
             <td style="text-align:center;">
-                <img style="width:5cm !important;" src="{{ asset('imgs/STRUK BS2.png') }}">
+                @if($type == 'download')
+                <img style="width:5cm !important;" src="{{ public_path() . '/imgs/STRUK BS2.png' }}">
+                @else
+                <img style="width:5cm !important;" src="{{ asset('/imgs/STRUK BS2.png') }}">
+                @endif
             </td>
         </tr>
         <tr>
@@ -57,7 +64,7 @@
                         <td width="1">:</td>
                         <td width="30%">{{ date('H:i', strtotime($transaction->created_at)) }}</td>
                     </tr>
-                    <tr>
+                    <tr>0
                         <td width="1">Customer</td>
                         <td width="1">:</td>
                         <td width="30%">{{ $transaction->customer->name }}</td>
@@ -86,7 +93,7 @@
                     </tr>
                     @foreach($det_trans as $detail)
                         <tr>
-                            <td>{{ $detail->product->product_name }}</td>
+                            <td>{!! nl2br($detail->product_name) !!}</td>
                             <td style="text-align:right;">{{ number_format($detail->product_price, 0, ',', '.') }}</td>
                             <td style="text-align:center;">{{ $detail->product_qty }}</td>
                             <td style="text-align:right;">{{ number_format($detail->product_subtotal, 0, ',', '.') }}</td>

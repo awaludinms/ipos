@@ -57,13 +57,16 @@
                     <x-menu-item title="Kategori Produk" icon="o-plus" link="/product_types/create" />
                 </x-menu-sub>
 
-                <x-menu-item title="Daftar Pengeliuaran" icon="o-sparkles" link="/expenses" />
+                <x-menu-item title="Daftar Pengeluaran" icon="o-sparkles" link="/expenses" />
 
                 <x-menu-sub title="Transaksi" icon="o-cog-6-tooth">
                     <x-menu-item title="Daftar Transaksi" icon="o-square-3-stack-3d" link="/transactions/" />
                     <x-menu-item title="Transaksi Customer" icon="o-plus" link="/transactions/create" />
                     <x-menu-item title="Transaksi Reseller" icon="o-plus" link="/transactions/create-reseller" />
                 </x-menu-sub>
+
+                <x-menu-separator></x-menu-separator>
+                <x-menu-item title="User" icon="o-user" link="/user/management" />
                 
                 {{-- <x-menu-sub title="Settings" icon="o-cog-6-tooth">
                     <x-menu-item title="Wifi" icon="o-wifi" link="####" />

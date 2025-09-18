@@ -72,7 +72,7 @@ new class extends Component {
 
     public string $product_custom_name = '';
 
-    public int $product_custom_qty = 1;
+    public int $product_custom_qty = 0;
 
     public string $product_custom_price = '';
 
@@ -89,10 +89,12 @@ new class extends Component {
 
     public function detailTrans()
     {
-        return TransactionDetails::query()
-            ->selectRaw("transaction_details.id, IF(product_id is null, concat_ws('',transaction_details.product_name, ' ', notes), concat_ws('',products.product_name, ' ', notes)) as product_name, product_qty, product_price, product_subtotal, notes")
-            ->leftJoin('products', 'product_id', '=', 'products.id')
-            ->where('transaction_id', $this->hidden_trans_id)->get();
+        return TransactionDetails::query()->where('transaction_id', $this->hidden_trans_id)->get();
+
+        // return TransactionDetails::query()
+        //     ->selectRaw("transaction_details.id, IF(product_id = null, transaction_details.product_name, products.product_name) as product_name, product_qty, product_price, product_subtotal, notes")
+        //     ->leftJoin('products', 'product_id', '=', 'products.id')
+        //     ->where('transaction_id', $this->hidden_trans_id)->get();
     }
 
     public function headers(): array
@@ -455,7 +457,6 @@ new class extends Component {
         $this->grandTotal = number_format($grandTotal, 0, ',', '.');
 
         $this->myModal1 = false;
-        $this->myModalCustomProduct = false;
     }
 }; ?>
 
@@ -536,13 +537,13 @@ new class extends Component {
                 </x-form>
             </x-modal>
 
-            <x-modal wire:model="myModalCustomProduct" title="Produk Custom" class="backdrop-blur"
-                subtitle="Tambah Produk Custom">
+            <x-modal wire:model="myModalCustomProduct" title="Pelanggan" class="backdrop-blur"
+                subtitle="Tambah Pelanggan">
                 <x-form no-separator wire:submit="addCustomProduct">
 
                     <x-input label="Nama Produk" wire:model="product_custom_name" />
-                    <x-input type="number" min="1" label="Qty" wire:model="product_custom_qty" />
-                    <x-input money prefix="Rp" label="Harga Produk" wire:model="product_custom_price" />
+                    <x-input label="Qty" wire:model="product_custom_qty" />
+                    <x-input label="Harga Produk" wire:model="product_custom_price" />
                     <x-textarea label="Keterangan" wire:model="product_custom_notes" />
 
                     <x-slot:actions>
@@ -555,9 +556,7 @@ new class extends Component {
             <x-modal wire:model="myModalProsesSelesai" title="Proses Selesai" subtitle="Proses Pembayaran"
                 box-class="border" class="backdrop-blur">
                 <x-slot:actions>
-                    <a href="/download/{{ $hidden_trans_id }}" target="_blank" rel="noopener noreferrer"
-                    class="btn btn-success">Unduh</a>
-                    <a href="/print/{{ $hidden_trans_id }}" target="_blank" rel="noopener noreferrer"
+                    <a href="/print-reseller/{{ $hidden_trans_id }}" target="_blank" rel="noopener noreferrer"
                         class="btn btn-primary">Cetak</a>
                 </x-slot:actions>
             </x-modal>
@@ -568,7 +567,7 @@ new class extends Component {
                     <x-slot:actions>
                         <div class="gap-3">
                             @if ($transDone)
-                                <x-button label="Tansaksi Baru" link="/transaction/create" icon="o-plus"
+                                <x-button label="Tansaksi Baru" @click="route('/transaction/create')" icon="o-plus"
                                     class="btn-success" spinner />
                             @else
                                 <x-button label="Tambah Item" @click="$wire.myModal1 = true" icon="o-plus"

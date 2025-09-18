@@ -43,13 +43,19 @@ Route::middleware('auth')->group(function () {
      Volt::route('/transactions', 'transactions.index');
      Volt::route('/transactions/create', 'transactions.create');
      Volt::route('/transactions/create-reseller', 'transactions.create_reseller');
+     Volt::route('/transactions/{transaction}/detail', 'transactions.detail');
    
     // Experiment
     Volt::route('/exp', 'experiment.form');
 
-    // Print struk
+    // Print & Download struk
     Route::get('/print/{transaction}', [PrintInvoiceController::class, 'index']);
+    Route::get('/download/{transaction}', [PrintInvoiceController::class, 'download']);
     Route::get('/print-reseller/{transaction}', [PrintInvoiceController::class, 'reseller']);
+    Route::get('/download-reseller/{transaction}', [PrintInvoiceController::class, 'downloadReseller']);
+    
+    // User Management
+    Volt::route('/user/management', 'user.management');
     // ... more
 });
 

@@ -41,6 +41,8 @@ new class extends Component {
 
     public bool $myModalProsesSelesai = false;
 
+    public bool $myModalCustomProduct = false;
+
     public string $search = '';
 
     public bool $drawer = false;
@@ -68,6 +70,14 @@ new class extends Component {
     // Options list
     public Collection $usersSearchable;
 
+    public string $product_custom_name = '';
+
+    public int $product_custom_qty = 1;
+
+    public string $product_custom_price = '';
+
+    public string $product_custom_notes = '';
+
     //
     public function products()
     {
@@ -79,7 +89,10 @@ new class extends Component {
 
     public function detailTrans()
     {
-        return TransactionDetails::query()->where('transaction_id', $this->hidden_trans_id)->get();
+        return TransactionDetails::query()
+            ->selectRaw("transaction_details.id, IF(product_id is null, concat_ws('',transaction_details.product_name, ' ', notes), concat_ws('',products.product_name, ' ', notes)) as product_name, product_qty, product_price, product_subtotal, notes")
+            ->leftJoin('products', 'product_id', '=', 'products.id')
+            ->where('transaction_id', $this->hidden_trans_id)->get();
     }
 
     public function headers(): array
@@ -95,7 +108,7 @@ new class extends Component {
     public function headersDetTrans(): array
     {
         return [
-            ['key' => 'product.product_name', 'label' => 'Nama Produk', 'class' => 'w-64'],
+            ['key' => 'product_name', 'label' => 'Nama Produk', 'class' => 'w-64'],
             // ['key' => 'buy_price', 'label' => 'Harga Beli', 'class' => 'w-20'],
             ['key' => 'product_qty', 'label' => 'Qty', 'sortable' => false, 'class' => 'w-10'],
             ['key' => 'product_price', 'label' => 'Harga', 'sortable' => false, 'format' => ['currency', '0,.', '']],
@@ -365,6 +378,83 @@ new class extends Component {
             $this->error("Gagal Simpan Transaksi" . json_encode($e->getMessage()), "simpan transaksi");
         }
     }
+
+    public function addCustomProduct()
+    {
+        if ($this->hidden_trans_id == -1) {
+            try {
+                $this->hidden_trans_id = 10;
+
+                $data = [
+                    'transaction_number' => date('YmdHis'),
+                    'customer_name' => $this->customer_name != "" ? "-" : $this->customer_name,
+                    'transaction_date' => $this->transaction_date,
+                    'customer_type' => 'customer',
+                    'grand_total' => 0,
+                    'paid' => 0,
+                    'pay_status' => 0,
+                    'change_return' => 0,
+                    'staff_name' => 0,
+                    'staff_id' => 0,
+                    'transaction_pay_type' => $this->transaction_pay_type,
+                    'created_at' => date('Y-m-d H:i:s')
+                ];
+
+                $trans_id = Transactions::insertGetId($data);
+                $this->hidden_trans_id = $trans_id;
+
+                // $this->warning($trans_id . json_encode($data) . 'It is fake.', position: 'toast-bottom');
+                // $this->warning("Will delete #$id", );
+
+                TransactionDetails::create([
+                    'transaction_id' => $trans_id,
+                    'product_id' => null,
+                    'product_qty' => $this->product_custom_qty,
+                    'product_name' => $this->product_custom_name,
+                    'product_price' => $this->product_custom_price,
+                    'notes' => $this->product_custom_notes,
+                    'product_subtotal' => $this->product_custom_qty * $this->product_custom_price,
+                    'created_by' => Auth::user()->id,
+                    'created_at' => date('Y-m-d H:i:s')
+                ]);
+
+                $grandTotal = TransactionDetails::query()
+                    ->where('transaction_id', $trans_id)
+                    ->selectRaw("SUM(product_qty * product_price) as grand_total")
+                    ->first()->grand_total;
+
+            } catch (\Exception $e) {
+                Log::debug(json_encode($e->getMessage()));
+                $this->warning(json_encode($e->getMessage()) . 'It is fake.', position: 'toast-bottom');
+                // $this->warning(json_encode($e->getMessage()));
+            }
+        } else {
+            // $this->warning('----' . 'It is fake.', position: 'toast-bottom');
+
+            TransactionDetails::create([
+                'transaction_id' => $this->hidden_trans_id,
+                'product_id' => null,
+                'product_qty' => $this->product_custom_qty,
+                'product_name' => $this->product_custom_name,
+                'product_price' => $this->product_custom_price,
+                'notes' => $this->product_custom_notes,
+                'product_subtotal' => $this->product_custom_qty * $this->product_custom_price,
+                'created_by' => Auth::user()->id,
+                'created_at' => date('Y-m-d H:i:s')
+            ]);
+
+
+            $grandTotal = TransactionDetails::query()
+                ->where('transaction_id', $this->hidden_trans_id)
+                ->selectRaw("SUM(product_qty * product_price) as grand_total")
+                ->first()->grand_total;
+        }
+        $this->grandTotalCalc = $grandTotal;
+        $this->grandTotal = number_format($grandTotal, 0, ',', '.');
+
+        $this->myModal1 = false;
+        $this->myModalCustomProduct = false;
+    }
 }; ?>
 
 <div>
@@ -392,6 +482,10 @@ new class extends Component {
                         @endscope
                     </x-table>
                 </x-card>
+                <x-slot:actions>
+                    <x-button @click="$wire.myModalCustomProduct = true" icon="o-plus" class="btn-primary">Produk
+                        Custom</x-button>
+                </x-slot:actions>
             </x-modal>
 
             <x-modal wire:model="myModal2" title="Bayar" subtitle="Pembayaran" class="backdrop-blur">
@@ -440,10 +534,28 @@ new class extends Component {
                 </x-form>
             </x-modal>
 
-            <x-modal wire:model="myModalProsesSelesai" title="Proses Selesai" subtitle="Proses Pembayaran" box-class="border"
-                class="backdrop-blur">
+            <x-modal wire:model="myModalCustomProduct" title="Produk Custom" class="backdrop-blur"
+                subtitle="Tambah Produk Custom">
+                <x-form no-separator wire:submit="addCustomProduct">
+
+                    <x-input label="Nama Produk" wire:model="product_custom_name" />
+                    <x-input type="number" min="1" label="Qty" wire:model="product_custom_qty" />
+                    <x-input money prefix="Rp" label="Harga Produk" wire:model="product_custom_price" />
+                    <x-textarea label="Keterangan" wire:model="product_custom_notes" />
+
+                    <x-slot:actions>
+                        <x-button label="Batal" @click="$wire.myModalCustomProduct = false" />
+                        <x-button label="Tambah" class="btn-primary" spinner="save" type="submit" />
+                    </x-slot:actions>
+                </x-form>
+            </x-modal>
+
+            <x-modal wire:model="myModalProsesSelesai" title="Proses Selesai" subtitle="Proses Pembayaran"
+                box-class="border" class="backdrop-blur">
                 <x-slot:actions>
-                    <a href="/print/{{ $hidden_trans_id }}" target="_blank" rel="noopener noreferrer"
+                    <a href="/download-reseller/{{ $hidden_trans_id }}" target="_blank" rel="noopener noreferrer"
+                    class="btn btn-success">Unduh</a>
+                    <a href="/print-reseller/{{ $hidden_trans_id }}" target="_blank" rel="noopener noreferrer"
                         class="btn btn-primary">Cetak</a>
                 </x-slot:actions>
             </x-modal>
@@ -454,7 +566,7 @@ new class extends Component {
                     <x-slot:actions>
                         <div class="gap-3">
                             @if ($transDone)
-                                <x-button label="Tansaksi Baru" @click="route('/transaction/create')" icon="o-plus" class="btn-success" spinner />
+                                <x-button label="Transaksi Baru" link="/transactions/create-reseller" icon="o-plus" class="btn-success" spinner />
                             @else
                                 <x-button label="Tambah Item" @click="$wire.myModal1 = true" icon="o-plus"
                                     class="btn-primary" />
