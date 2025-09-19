@@ -498,12 +498,12 @@ new class extends Component {
                         placeholder="Nilai Pembayaran" prefix="Rp" />
                     <x-input readonly label="Kembalian" placeholder="Nilai Pembayaran" wire:model="change_return"
                         prefix="Rp" />
-                    <div class="grid grid-cols-7 gap-3">
-                        <div class="col-span-5">
+                    <div class="grid grid-cols-8 gap-1">
+                        <div class="lg:col-span-6 col-span-4 ">
                             <x-choices label="Pelanggan" wire:model="user_searchable_id" :options="$usersSearchable"
                                 placeholder="Search ..." single searchable />
                         </div>
-                        <div class="col-span-2 content-end text-right">
+                        <div class="lg:col-span-2 col-span-4 content-end text-right">
                             <x-button class="mt-2" label="Tambah" @click="$wire.myModalPelanggan = true" icon="o-plus"
                                 class="btn-primary" />
                         </div>

@@ -3,6 +3,7 @@
 use App\Models\User;
 use Livewire\Volt\Component;
 use Illuminate\Database\Eloquent\Builder;
+use Livewire\Attributes\Rule;
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
 
@@ -15,6 +16,34 @@ new class extends Component {
     public bool $drawer = false;
 
     public array $sortBy = ['column' => 'id', 'direction' => 'asc'];
+
+    public bool $myModalUser = false;
+
+    #[Rule('required|unique:users,email')]
+    public string $email = '';
+
+    #[Rule('required')]
+    public string $name = '';
+
+
+    #[Rule('required|confirmed|min:8')]
+    public string $password = '';
+
+    #[Rule('required')]
+    public string $password_confirmation = '';
+
+    public function save()
+    {
+        $this->validate();
+
+        User::create([
+            'name' => $this->name,
+            'password' => Hash::make($this->password),
+            'email' => $this->email,
+    ]);
+    }
+
+
     public function users()
     {
         return User::where('id', '!=', 1)->paginate(10);
@@ -26,7 +55,7 @@ new class extends Component {
             ['key' => 'id', 'label' => '#', 'class' => 'w-1'],
             ['key' => 'name', 'label' => 'Nama', 'class' => 'w-64'],
             // ['key' => 'buy_price', 'label' => 'Harga Beli', 'class' => 'w-20'],
-            ['key' => 'email', 'label' => 'Email', 'sortable' => false, 'format' => ['currency', '0,.', '']],
+            ['key' => 'email', 'label' => 'Email', 'sortable' => false],
         ];
     }
 
@@ -40,19 +69,35 @@ new class extends Component {
 }; ?>
 
 <div>
+    <x-modal wire:model="myModalUser" title="User" class="backdrop-blur" subtitle="Tambah User">
+        <x-form no-separator wire:submit="save">
+
+            <x-input label="Nama User" wire:model="name" icon="o-user" />
+            <x-input type="email" label="Email" wire:model="email" icon="o-user" />
+            <x-input type="password" label="Password" wire:model="password" icon="o-key" />
+            <x-input type="password" label="Konfirmasi Password" wire:model="password_confirmation" icon="o-key" />
+            
+            {{-- Notice we are using now the `actions` slot from `x-form`, not from modal --}}
+            <x-slot:actions>
+                <x-button label="Batal" @click="$wire.myModalUser = false" />
+                <x-button label="Simpan" class="btn-primary" spinner="save" type="submit" />
+            </x-slot:actions>
+        </x-form>
+    </x-modal>
+
     <x-header title="User" separator progress-indicator>
         <x-slot:middle class="!justify-end">
             <x-input placeholder="Search..." wire:model.live.debounce="search" clearable icon="o-magnifying-glass" />
         </x-slot:middle>
         <x-slot:actions>
             <x-button label="Filters" @click="$wire.drawer = true" responsive icon="o-funnel" />
-            <x-button label="Tambah" link="/products/create" responsive icon="o-plus" class="btn-primary" />
+            <x-button label="Tambah" @click="$wire.myModalUser = true" responsive icon="o-plus" class="btn-primary" />
         </x-slot:actions>
     </x-header>
 
     <!-- TABLE  -->
     <x-card shadow>
-        <x-table with-pagination :headers="$headers" :rows="$users" :sort-by="$sortBy" link="/products/{id}/edit">
+        <x-table with-pagination :headers="$headers" :rows="$users" :sort-by="$sortBy" @row-click="$wire.add($event.id)">
             @scope('actions', $user)
             {{-- <x-button icon="o-pencil" wire:click="delete({{ $user['id'] }})" wire:confirm="Are you sure?" spinner --}}
             {{-- class="btn-ghost btn-sm text-error" /> --}}
