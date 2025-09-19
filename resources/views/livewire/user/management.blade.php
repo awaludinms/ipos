@@ -8,7 +8,7 @@ use Livewire\WithPagination;
 use Mary\Traits\Toast;
 
 new class extends Component {
-    use WithPagination; 
+    use WithPagination;
     use Toast;
 
     public string $search = '';
@@ -19,34 +19,97 @@ new class extends Component {
 
     public bool $myModalUser = false;
 
-    #[Rule('required|unique:users,email')]
-    public string $email = '';
+    public string $email_user = '';
 
-    #[Rule('required')]
     public string $name = '';
 
+    public string $password_user = '';
 
-    #[Rule('required|confirmed|min:8')]
-    public string $password = '';
+    public string $password_user_confirmation = '';
 
-    #[Rule('required')]
-    public string $password_confirmation = '';
+    public int $user_id = -1;
 
     public function save()
     {
-        $this->validate();
+        if (Auth::user()->role_id == 4) { # (4) admin
+            if ($this->user_id == -1) {
+                $this->validate([
+                    'name' => 'required',
+                    'email_user' => 'required|email|unique:users,email',
+                    'password_user' => 'required|min:8|confirmed',
+                    'password_user_confirmation' => 'required'
+                ]);
 
-        User::create([
-            'name' => $this->name,
-            'password' => Hash::make($this->password),
-            'email' => $this->email,
-    ]);
+                User::create([
+                    'name' => $this->name,
+                    'password' => Hash::make($this->password_user),
+                    'email' => $this->email_user,
+                ]);
+                $this->user_id = -1;
+
+                $this->success("User berhasil ditambahkan", 'penambahan user');
+
+            } else {
+                if (trim($this->password_user_confirmation) == '') {
+
+                    $this->validate([
+                        'name' => 'required',
+                        'email_user' => 'required|unique:users,email,' . $this->user_id
+                    ]);
+                } else {
+                    $this->validate([
+                        'name' => 'required',
+                        'email_user' => 'required|email|unique:users,email',
+                        'password_user' => 'required|min:8|confirmed',
+                        'password_user_confirmation' => 'required'
+                    ]);
+                }
+
+                User::find($this->user_id)->update([
+                    'name' => $this->name,
+                    'email' => $this->email_user,
+                ]);
+
+                $this->user_id = -1;
+
+                $this->success("User berhasil diubah", 'perubahan user');
+            }
+        }
+
+        $this->myModalUser = false;
     }
 
+    public function edit(int $id)
+    {
+        $this->myModalUser = true;
+        $user = User::find($id);
+        if ($user != null) {
+            $this->name = $user->name;
+            $this->email_user = $user->email;
+            $this->password_user_confirmation = '';
+            $this->user_id = $id;
+        } else {
+            $this->myModalUser = false;
+        }
+    }
+
+    public function delete($id): void
+    {
+        // $this->success('-->' . $id . '<--', '');
+        User::find($id)->delete();
+        $this->success('User berhasil dihapus');
+
+    }
 
     public function users()
     {
-        return User::where('id', '!=', 1)->paginate(10);
+        return User::where('id', '!=', 1)
+            ->when($this->search, function(Builder $q) {
+                $q->where('email', 'like', "%$this->search%");
+                $q->orWhere('name', 'like', "%$this->search%");
+            })
+            ->orderBy(...array_values($this->sortBy))
+            ->paginate(10);
     }
 
     public function headers()
@@ -59,24 +122,34 @@ new class extends Component {
         ];
     }
 
+    public function mount()
+    {
+        if (Auth::user()->role_id != 4) {
+            $this->redirect('/transactions/create');
+        }
+    }
+
+
     public function with()
     {
         return [
             'headers' => $this->headers(),
             'users' => $this->users()
-    ];
+        ];
     }
 }; ?>
 
 <div>
-    <x-modal wire:model="myModalUser" title="User" class="backdrop-blur" subtitle="Tambah User">
+    <x-modal wire:model="myModalUser" title="User" class="backdrop-blur"
+        subtitle="{{ $this->user_id != -1 ? 'Ubah User' : 'Tambah User' }}">
         <x-form no-separator wire:submit="save">
 
             <x-input label="Nama User" wire:model="name" icon="o-user" />
-            <x-input type="email" label="Email" wire:model="email" icon="o-user" />
-            <x-input type="password" label="Password" wire:model="password" icon="o-key" />
-            <x-input type="password" label="Konfirmasi Password" wire:model="password_confirmation" icon="o-key" />
-            
+            <x-input type="email" label="Email" wire:model="email_user" icon="o-user" />
+            {{-- @if($this->user_id == -1) --}}
+            <x-input type="password" label="Password" wire:model="password_user" icon="o-key" />
+            <x-input type="password" label="Konfirmasi Password" wire:model="password_user_confirmation" icon="o-key" />
+            {{-- @endif --}}
             {{-- Notice we are using now the `actions` slot from `x-form`, not from modal --}}
             <x-slot:actions>
                 <x-button label="Batal" @click="$wire.myModalUser = false" />
@@ -91,16 +164,18 @@ new class extends Component {
         </x-slot:middle>
         <x-slot:actions>
             <x-button label="Filters" @click="$wire.drawer = true" responsive icon="o-funnel" />
-            <x-button label="Tambah" @click="$wire.myModalUser = true" responsive icon="o-plus" class="btn-primary" />
+            <x-button label="Tambah" @click="$wire.user_id=-1;$wire.myModalUser = true" responsive icon="o-plus"
+                class="btn-primary" />
         </x-slot:actions>
     </x-header>
 
     <!-- TABLE  -->
     <x-card shadow>
-        <x-table with-pagination :headers="$headers" :rows="$users" :sort-by="$sortBy" @row-click="$wire.add($event.id)">
+        <x-table with-pagination :headers="$headers" :rows="$users" :sort-by="$sortBy"
+            @row-click="$wire.edit($event.detail.id)">
             @scope('actions', $user)
-            {{-- <x-button icon="o-pencil" wire:click="delete({{ $user['id'] }})" wire:confirm="Are you sure?" spinner --}}
-            {{-- class="btn-ghost btn-sm text-error" /> --}}
+            {{-- <x-button icon="o-pencil" wire:click="delete({{ $user['id'] }})" wire:confirm="Are you sure?" spinner
+                --}} {{-- class="btn-ghost btn-sm text-error" /> --}}
             <x-button icon="o-trash" wire:click="delete({{ $user['id'] }})" wire:confirm="Are you sure?" spinner
                 class="btn-ghost btn-sm text-error" />
             @endscope
@@ -117,4 +192,5 @@ new class extends Component {
             <x-button label="Done" icon="o-check" class="btn-primary" @click="$wire.drawer = false" />
         </x-slot:actions>
     </x-drawer>
+    <input type="hidden" value="{{ $user_id }}">
 </div>
