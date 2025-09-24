@@ -40,3 +40,14 @@
 .mary-table-pagination button {
     @apply cursor-pointer
 }
+
+
+/* @plugin "daisyui/theme" { */
+    /* name: "dark";              the theme name you want to override */
+    /* default: true;              set as default */
+    /* prefersdark: true;         set as default dark mode (prefers-color-scheme:dark) */
+    /* color-scheme: dark;        color of browser-provided UI */
+ 
+    /* Custom styles ...*/
+    /* --radius-field: 2.25rem; */
+/* } */

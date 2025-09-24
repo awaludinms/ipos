@@ -1,15 +1,15 @@
 <?php
 
 namespace App\Models;
-use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
-class TransactionDetails extends Model
+
+class TempTransactionDetail extends Model
 {
     protected $fillable = [
-        'product_id', 'product_price', 'product_qty', 'transaction_id',
+        'product_id', 'product_price', 'product_qty', 'temp_transaction_id',
         'created_by', 'product_subtotal', 'product_name', 'notes'
     ];
     //

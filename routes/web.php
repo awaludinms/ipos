@@ -19,7 +19,7 @@ Route::get('/logout', function () {
  
 // Protected routes here
 Route::middleware('auth')->group(function () {
-    Volt::route('/', 'product');
+    Volt::route('/', 'transactions.index');
     Volt::route('/users', 'users.index');
     Volt::route('/users/create', 'users.create');
     Volt::route('/users/{user}/edit', 'users.edit');
@@ -44,6 +44,7 @@ Route::middleware('auth')->group(function () {
      Volt::route('/transactions/create', 'transactions.create');
      Volt::route('/transactions/create-reseller', 'transactions.create_reseller');
      Volt::route('/transactions/{transaction}/detail', 'transactions.detail');
+     Volt::route('/transactions/{transaction}/edit', 'transactions.edit');
    
     // Experiment
     Volt::route('/exp', 'experiment.form');
@@ -56,6 +57,10 @@ Route::middleware('auth')->group(function () {
     
     // User Management
     Volt::route('/user/management', 'user.management');
+    
+    // Report
+    Volt::route('/reports/sales', 'reports.sales');
+    Volt::route('/reports/receivables', 'reports.receivables');
     // ... more
 });
 

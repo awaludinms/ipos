@@ -8,9 +8,25 @@
     <title>{{ isset($title) ? $title . ' - ' . config('app.name') : config('app.name') }}</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <style>
+        .tab {
+            padding-left: 12px;
+        }
+    </style>
     {{-- Currency --}}
     <script type="text/javascript"
         src="https://cdn.jsdelivr.net/gh/robsontenorio/mary@0.44.2/libs/currency/currency.js"></script>
+    {{-- Flatpickr --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+    {{-- It will not apply locale yet --}}
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/id.js"></script>
+
+    {{-- You need to set here the default locale or any global flatpickr settings--}}
+    <script>
+        flatpickr.localize(flatpickr.l10ns.id);
+    </script>
 
 </head>
 
@@ -46,8 +62,11 @@
                     <x-list-item :item="$user" value="name" sub-value="email" no-separator no-hover
                         class="-mx-2 !-my-2 rounded">
                         <x-slot:actions>
-                            <x-button icon="o-power" class="btn-circle btn-ghost btn-xs" tooltip-left="logoff"
-                                no-wire-navigate link="/logout" />
+                            <div class="grid grid-cols-2">
+                                <div><x-theme-toggle /></div>
+                                <div><x-button icon="o-power" class="btn-circle btn-ghost btn-xs" tooltip-left="logoff"
+                                        no-wire-navigate link="/logout" /></div>
+                            </div>
                         </x-slot:actions>
                     </x-list-item>
 
@@ -62,16 +81,31 @@
                     <x-menu-item title="Kategori Produk" icon="o-plus" link="/product_types/create" />
                 </x-menu-sub>
 
-                <x-menu-item title="Daftar Pengeluaran" icon="o-sparkles" link="/expenses" />
+                <x-menu-separator />
 
-                <x-menu-sub title="Transaksi" icon="o-cog-6-tooth">
+
+                {{-- <x-menu-sub title="Transaksi" icon="o-cog-6-tooth" acttvate-by-route> --}}
                     <x-menu-item title="Daftar Transaksi" icon="o-square-3-stack-3d" link="/transactions/" />
                     <x-menu-item title="Transaksi Customer" icon="o-plus" link="/transactions/create" />
                     <x-menu-item title="Transaksi Reseller" icon="o-plus" link="/transactions/create-reseller" />
-                </x-menu-sub>
+                    {{-- </x-menu-sub> --}}
+
+                <x-menu-separator />
 
                 @if(Auth::user()->role_id == 4)
-                    <x-menu-separator></x-menu-separator>
+                    <x-menu-item title="Daftar Pengeluaran" icon="o-sparkles" link="/expenses" />
+
+                    <x-menu-separator />
+
+                    <x-menu-sub title="Laporan" icon="o-cog-6-tooth">
+                        <x-menu-item title="Laporan Penjualan" icon="o-square-3-stack-3d" link="/reports/sales" />
+                        <x-menu-item title="Laporan Piutang" icon="o-square-3-stack-3d" link="/reports/receivables" />
+                        {{-- <x-menu-item title="" icon="o-plus" link="/transactions/create-reseller" /> --}}
+                    </x-menu-sub>
+                @endif
+
+                @if(Auth::user()->role_id == 4)
+                    <x-menu-separator />
                     <x-menu-item title="User" icon="o-user" link="/user/management" />
                 @endif
                 {{-- <x-menu-sub title="Settings" icon="o-cog-6-tooth">
@@ -89,6 +123,8 @@
 
     {{-- TOAST area --}}
     <x-toast />
+
+
 </body>
 
 </html>

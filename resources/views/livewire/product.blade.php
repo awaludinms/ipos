@@ -66,7 +66,7 @@ new class extends Component {
     <!-- HEADER -->
     <x-header title="Produk" separator progress-indicator>
         <x-slot:middle class="!justify-end">
-            <x-input placeholder="Search..." wire:model.live.debounce="search" clearable icon="o-magnifying-glass" />
+            <x-input placeholder="Cari..." wire:model.live.debounce="search" clearable icon="o-magnifying-glass" />
         </x-slot:middle>
         <x-slot:actions>
             <x-button label="Filters" @click="$wire.drawer = true" responsive icon="o-funnel" />
@@ -76,7 +76,7 @@ new class extends Component {
 
     <!-- TABLE  -->
     <x-card shadow>
-        <x-table with-pagination :headers="$headers" :rows="$products" :sort-by="$sortBy" link="/products/{id}/edit">
+        <x-table show-empty-text empty-text="Belum ada Record Data, Tambahkan melalui tombol tambah di atas!"  with-pagination :headers="$headers" :rows="$products" :sort-by="$sortBy" link="/products/{id}/edit">
             @scope('actions', $user)
             {{-- <x-button icon="o-pencil" wire:click="delete({{ $user['id'] }})" wire:confirm="Are you sure?" spinner --}}
             {{-- class="btn-ghost btn-sm text-error" /> --}}
@@ -88,7 +88,7 @@ new class extends Component {
 
     <!-- FILTER DRAWER -->
     <x-drawer wire:model="drawer" title="Filters" right separator with-close-button class="lg:w-1/3">
-        <x-input placeholder="Search..." wire:model.live.debounce="search" icon="o-magnifying-glass"
+        <x-input placeholder="Cari..." wire:model.live.debounce="search" icon="o-magnifying-glass"
             @keydown.enter="$wire.drawer = false" />
 
         <x-slot:actions>

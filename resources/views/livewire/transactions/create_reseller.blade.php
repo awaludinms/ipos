@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Transactions;
 use App\Models\TransactionDetails;
 use App\Models\LastTransactionNumber;
+use App\Models\TransactionPayments;
 use Livewire\Volt\Component;
 use Livewire\Attributes\Rule;
 use Illuminate\Database\Eloquent\Builder;
@@ -43,6 +44,8 @@ new class extends Component {
 
     public bool $myModalCustomProduct = false;
 
+    public bool $myModalAddNotes = false;
+
     public string $search = '';
 
     public bool $drawer = false;
@@ -53,7 +56,7 @@ new class extends Component {
 
     public array $sortBy = ['column' => 'id', 'direction' => 'asc'];
 
-    public $selectedMetodePembayaran = '';
+    public $selectedMetodePembayaran = 1;
 
     public $grandTotal = 0;
 
@@ -78,6 +81,10 @@ new class extends Component {
 
     public string $product_custom_notes = '';
 
+    public int $current_editing = 0;
+
+    public ?string $detail_notes = '';
+
     //
     public function products()
     {
@@ -90,7 +97,7 @@ new class extends Component {
     public function detailTrans()
     {
         return TransactionDetails::query()
-            ->selectRaw("transaction_details.id, IF(product_id is null, concat_ws('',transaction_details.product_name, ' ', notes), concat_ws('',products.product_name, ' ', notes)) as product_name, product_qty, product_price, product_subtotal, notes")
+            ->selectRaw("transaction_details.id, IF(product_id is null, concat_ws('',transaction_details.product_name, ' \n<div class=\"tab\">', notes, '</div>'), concat_ws('',products.product_name, ' \n<div class=\"tab\">', notes, '</div>')) as product_name, product_qty, product_price, product_subtotal, notes")
             ->leftJoin('products', 'product_id', '=', 'products.id')
             ->where('transaction_id', $this->hidden_trans_id)->get();
     }
@@ -219,7 +226,9 @@ new class extends Component {
         $this->search();
 
         // remove not process transaction (state new) within more than 24 hours
-        $trans = Transactions::whereRaw('DATE_ADD(created_at, INTERVAL 24 HOUR) <= CURRENT_DATE()');
+        Transactions::whereRaw('DATE_ADD(created_at, INTERVAL 24 HOUR) <= CURRENT_DATE()')
+            ->where('transaction_state', 1)
+            ->delete();
 
     }
 
@@ -243,6 +252,7 @@ new class extends Component {
 
     public function update($det_trans_id, $value)
     {
+        $this->myModalAddNotes = false;
         // if ($value > 0) {
         $transdet = TransactionDetails::find($det_trans_id);
         $price = $transdet->product_price;
@@ -266,7 +276,7 @@ new class extends Component {
 
     public function calculateChange()
     {
-        $this->change_return = $this->paid - $this->grandTotalCalc;
+        $this->change_return = ($this->paid - $this->grandTotalCalc < 0) ? 0 : $this->paid - $this->grandTotalCalc;
     }
 
     // Delete action
@@ -294,7 +304,7 @@ new class extends Component {
         $this->grandTotalCalc = $grandTotal;
         $this->grandTotal = number_format($grandTotal, 0, ',', '.');
 
-        $this->warning("Will delete #$id", 'deleted item.', position: 'toast-bottom');
+        $this->warning("Item berhasil dihapus", 'deleted item.', position: 'toast-bottom');
 
     }
 
@@ -337,6 +347,8 @@ new class extends Component {
 
     public function saveTransaction()
     {
+        Log::info("metode pembayaran: " . $this->selectedMetodePembayaran);
+
         $this->validate([
             'user_searchable_id' => [
                 'required',
@@ -347,44 +359,58 @@ new class extends Component {
         ]);
 
         $transaction_state = 1;
-        if ($this->paid != 0) {
-            if ($this->change_return < 0) {
-                // paid is not enough means credit
-                $transaction_state = 3;
-            }
-            $transaction_state = 2; // Done-payed
-        } else {
-            // paid is zero means credit
-            $transaction_state = 3;
-        }
-
+        $transaction_state = ($this->paid != 0) ? ($this->paid < $this->grandTotalCalc ? 3 : 2) : 3;
+        
+        DB::beginTransaction();
         try {
             Transactions::find($this->hidden_trans_id)
                 ->update([
-                    'customer_id' => $this->user_searchable_id,
-                    'transaction_pay_type' => $this->transaction_pay_type,
+                    'reseller_id' => $this->user_searchable_id,
+                    'transaction_pay_type' => $this->selectedMetodePembayaran,
                     'transaction_state' => $transaction_state,
                     'change_return' => $this->change_return,
                     'grand_total' => $this->grandTotalCalc,
                     'staff_id' => Auth::user()->id,
-                    'transaction_date' => date('Y-m-d H:i:s')
+                    'transaction_date' => date('Y-m-d H:i:s'),
+                    'paid' => $this->paid,
                 ]);
             LastTransactionNumber::insert(['transaction_id' => $this->hidden_trans_id]);
+
+
+            // add payment
+            if ($this->paid != 0) {
+                TransactionPayments::create([
+                    'transaction_id' => $this->hidden_trans_id,
+                    'amount' => $this->paid,
+                    'method' => $this->selectedMetodePembayaran,
+                    'trans_status' => ($this->paid != 0) ? ($this->paid < $this->grandTotalCalc ? 'DP' : 'Lunas') : 'Hutang',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'change_return' => $this->change_return,
+                    'staff_id' => Auth::user()->id,
+                ]);
+            }
+
+            DB::commit();
             $this->myModalProsesSelesai = true;
             $this->myModal2 = false;
             $this->transDone = true;
+            
             $this->success("Transaksi berhasil disimpan", "simpan transaksi");
         } catch (\Exception $e) {
+            DB::rollBack();
+            $this->myModal2 = true;
+            $this->transDone = false;
+
+            $this->myModalProsesSelesai = false;
             $this->error("Gagal Simpan Transaksi" . json_encode($e->getMessage()), "simpan transaksi");
         }
     }
 
     public function addCustomProduct()
     {
+        $grandTotal = 0;
         if ($this->hidden_trans_id == -1) {
             try {
-                $this->hidden_trans_id = 10;
-
                 $data = [
                     'transaction_number' => date('YmdHis'),
                     'customer_name' => $this->customer_name != "" ? "-" : $this->customer_name,
@@ -411,9 +437,9 @@ new class extends Component {
                     'product_id' => null,
                     'product_qty' => $this->product_custom_qty,
                     'product_name' => $this->product_custom_name,
-                    'product_price' => $this->product_custom_price,
+                    'product_price' => (Double) $this->product_custom_price,
                     'notes' => $this->product_custom_notes,
-                    'product_subtotal' => $this->product_custom_qty * $this->product_custom_price,
+                    'product_subtotal' => $this->product_custom_qty * (int) $this->product_custom_price,
                     'created_by' => Auth::user()->id,
                     'created_at' => date('Y-m-d H:i:s')
                 ]);
@@ -425,7 +451,7 @@ new class extends Component {
 
             } catch (\Exception $e) {
                 Log::debug(json_encode($e->getMessage()));
-                $this->warning(json_encode($e->getMessage()) . 'It is fake.', position: 'toast-bottom');
+                $this->warning(json_encode($e->getMessage()) . 'Err.', position: 'toast-bottom');
                 // $this->warning(json_encode($e->getMessage()));
             }
         } else {
@@ -436,9 +462,9 @@ new class extends Component {
                 'product_id' => null,
                 'product_qty' => $this->product_custom_qty,
                 'product_name' => $this->product_custom_name,
-                'product_price' => $this->product_custom_price,
+                'product_price' => (Double) $this->product_custom_price,
                 'notes' => $this->product_custom_notes,
-                'product_subtotal' => $this->product_custom_qty * $this->product_custom_price,
+                'product_subtotal' => $this->product_custom_qty * (int) $this->product_custom_price,
                 'created_by' => Auth::user()->id,
                 'created_at' => date('Y-m-d H:i:s')
             ]);
@@ -455,6 +481,45 @@ new class extends Component {
         $this->myModal1 = false;
         $this->myModalCustomProduct = false;
     }
+
+    public function addNote($id)
+    {
+        $det = TransactionDetails::find($id);
+        if ($det != null) {
+            $this->current_editing = $id;
+            $this->myModalAddNotes = true;
+
+            $this->detail_notes = $det->notes;
+        }
+    }
+
+    public function saveNote()
+    {
+        TransactionDetails::find($this->current_editing)
+            ->update([
+                'notes' => $this->detail_notes
+            ]);
+
+        $this->success('Keterangan berhasil ditambahkan #' . $this->current_editing);
+        $this->myModalAddNotes = false;
+    }
+
+    public function backToTransaction()
+    {
+        redirect('/transactions');
+    }
+
+    public function resetTransaction()
+    {
+        // remove current transaction
+        $trans = Transactions::find($this->hidden_trans_id);
+        if ($trans != null) {
+            $trans->details()->delete();
+            $trans->delete();
+            redirect('/transactions/create-reseller');
+        }
+        $this->info("Transaksi Baru");
+    }
 }; ?>
 
 <div>
@@ -465,14 +530,15 @@ new class extends Component {
 
 </div> */ ?>
 
-            <x-modal wire:model="myModal1" title="Produk" subtitle="Pilih Produk" box-class="border"
+            <x-modal wire:model="myModal1" title="Produk" subtitle="Pilih Produk" 
                 class="backdrop-blur">
-                <x-input placeholder="Search..." wire:model.live.debounce="search" clearable
-                    icon="o-magnifying-glass" />
+                <x-input placeholder="Cari..." wire:model.live.debounce="search" clearable icon="o-magnifying-glass" />
 
                 <!-- TABLE  -->
                 <x-card shadow>
-                    <x-table with-pagination :headers="$headers" :rows="$products" :sort-by="$sortBy"
+                    <x-table show-empty-text
+                        empty-text="Belum ada Record Data, Tambahkan melalui tombol tambah di atas!" with-pagination
+                        :headers="$headers" :rows="$products" :sort-by="$sortBy"
                         @row-click="$wire.add($event.detail.id)">
                         @scope('actions', $product)
                         {{-- <x-button icon="o-pencil" wire:click="delete({{ $product['id'] }})"
@@ -534,6 +600,19 @@ new class extends Component {
                 </x-form>
             </x-modal>
 
+            <x-modal wire:model="myModalAddNotes" title="Keterangan" class="backdrop-blur" subtitle="Tambah Keterangan">
+                <x-form no-separator wire:submit="saveNote">
+
+                    <x-textarea label="Notes" wire:model="detail_notes" />
+
+                    {{-- Notice we are using now the `actions` slot from `x-form`, not from modal --}}
+                    <x-slot:actions>
+                        <x-button label="Batal" @click="$wire.myModalReseller = false" />
+                        <x-button label="Simpan" class="btn-primary" spinner="save" type="submit" />
+                    </x-slot:actions>
+                </x-form>
+            </x-modal>
+
             <x-modal wire:model="myModalCustomProduct" title="Produk Custom" class="backdrop-blur"
                 subtitle="Tambah Produk Custom">
                 <x-form no-separator wire:submit="addCustomProduct">
@@ -551,10 +630,12 @@ new class extends Component {
             </x-modal>
 
             <x-modal wire:model="myModalProsesSelesai" title="Proses Selesai" subtitle="Proses Pembayaran"
-                box-class="border" class="backdrop-blur">
+                class="backdrop-blur">
                 <x-slot:actions>
+                    <x-button label="Tutup & Transaksi Baru" link="/transactions/create-reseller" icon="o-plus" class="btn-error"
+                        spinner />
                     <a href="/download-reseller/{{ $hidden_trans_id }}" target="_blank" rel="noopener noreferrer"
-                    class="btn btn-success">Unduh</a>
+                        class="btn btn-success">Unduh</a>
                     <a href="/print-reseller/{{ $hidden_trans_id }}" target="_blank" rel="noopener noreferrer"
                         class="btn btn-primary">Cetak</a>
                 </x-slot:actions>
@@ -564,10 +645,16 @@ new class extends Component {
             <div class="col-span-4">
                 <x-header title="Transaksi Reseller" separator progress-indicator>
                     <x-slot:actions>
-                        <div class="gap-3">
+                        <div class="flex flex-wrap gap-3">
                             @if ($transDone)
-                                <x-button label="Transaksi Baru" link="/transactions/create-reseller" icon="o-plus" class="btn-success" spinner />
+                                <x-button label="Transaksi Baru" link="/transactions/create-reseller" icon="o-plus"
+                                    class="btn-success" spinner />
                             @else
+                                <x-button wire:click="backToTransaction" label="Kembali" icon="o-arrow-left"
+                                    class="btn-secondary" wire:confirm="Anda ingin kembali ke halaman transaksi dan membatalkan transaksi yang sedang berlangsung?"/>
+                                <x-button wire:click="resetTransaction" label="Batalkan" icon="o-x-mark"
+                                    wire:confirm="Anda ingin membatalkan transaksi yang sedang berlangsung?"
+                                    class="btn-error" />
                                 <x-button label="Tambah Item" @click="$wire.myModal1 = true" icon="o-plus"
                                     class="btn-primary" />
                                 @if ($hidden_trans_id == -1)
@@ -588,7 +675,13 @@ new class extends Component {
                 <div class="pt-3.5">
                     <!-- TABLE  -->
                     <x-card shadow class="sm:p-0">
-                        <x-table :headers="$headersDetTrans" :rows="$detailTrans" :sort-by="$sortBy">
+                        <x-table show-empty-text
+                            empty-text="Belum ada Record Data, Tambahkan melalui tombol tambah di atas!"
+                            :headers="$headersDetTrans" :rows="$detailTrans" :sort-by="$sortBy">
+                            {{-- @row-click="$wire.addNote($event.detail.id)"> --}}
+                            @scope('cell_product_name', $detTrans)
+                            {!! nl2br($detTrans->product_name) !!}
+                            @endscope
                             @scope('cell_product_qty', $detTrans)
                             <x-input class="w-10" wire:change="update({{ $detTrans->id }}, $event.target.value)"
                                 type="number" value="{{ $detTrans->product_qty }}" min="1" />
@@ -596,10 +689,18 @@ new class extends Component {
 
                             @scope('actions', $product)
                             {{-- <x-button icon="o-pencil" wire:click="delete({{ $product['id'] }})"
-                                wire:confirm="Are you sure?" spinner --}} {{-- class="btn-ghost btn-sm text-error" />
-                            --}}
-                            <x-button icon="o-trash" wire:click="delete({{ $product['id'] }})" spinner
+                                wire:confirm="Are you sure?" spinner class="btn-ghost btn-sm text-error" /> --}}
+
+                            {{-- <x-button icon="o-trash" wire:click="delete({{ $product['id'] }})" spinner
                                 class="btn-ghost btn-sm text-error" wire:confirm="Anda ingin menghapus Item ini?" />
+                            --}}
+                            <x-dropdown no-x-anchor right>
+                                <x-menu-item title="Ubah Keterangan" wire:click="addNote({{ $product['id'] }})"
+                                    icon="o-archive-box" />
+                                <x-menu-item title="Hapus" icon="o-trash" wire:click="delete({{ $product['id'] }})"
+                                    wire:confirm="Anda ingin menghapus item ini?" accesskey=""
+                                    spinner="delete({{ $product['id'] }})" />
+                            </x-dropdown>
                             @endscope
                         </x-table>
                     </x-card>

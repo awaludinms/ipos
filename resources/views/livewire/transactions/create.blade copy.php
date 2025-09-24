@@ -362,6 +362,7 @@ new class extends Component {
             $transaction_state = 3;
         }
 
+        DB::beginTransaction();
         try {
             Transactions::find($this->hidden_trans_id)
                 ->update([
@@ -377,8 +378,10 @@ new class extends Component {
             $this->myModalProsesSelesai = true;
             $this->myModal2 = false;
             $this->transDone = true;
+            DB::commit();
             $this->success("Transaksi berhasil disimpan", "simpan transaksi");
         } catch (\Exception $e) {
+            DB::rollBack();
             $this->error("Gagal Simpan Transaksi" . json_encode($e->getMessage()), "simpan transaksi");
         }
     }
@@ -468,14 +471,14 @@ new class extends Component {
 
 </div> */ ?>
 
-            <x-modal wire:model="myModal1" title="Produk" subtitle="Pilih Produk" box-class="border"
+            <x-modal wire:model="myModal1" title="Produk" subtitle="Pilih Produk" 
                 class="backdrop-blur">
-                <x-input placeholder="Search..." wire:model.live.debounce="search" clearable
+                <x-input placeholder="Cari..." wire:model.live.debounce="search" clearable
                     icon="o-magnifying-glass" />
 
                 <!-- TABLE  -->
                 <x-card shadow>
-                    <x-table with-pagination :headers="$headers" :rows="$products" :sort-by="$sortBy"
+                    <x-table show-empty-text empty-text="Belum ada Record Data, Tambahkan melalui tombol tambah di atas!"  with-pagination :headers="$headers" :rows="$products" :sort-by="$sortBy"
                         @row-click="$wire.add($event.detail.id)">
                         @scope('actions', $product)
                         {{-- <x-button icon="o-pencil" wire:click="delete({{ $product['id'] }})"
@@ -554,7 +557,7 @@ new class extends Component {
             </x-modal>
 
             <x-modal wire:model="myModalProsesSelesai" title="Proses Selesai" subtitle="Proses Pembayaran"
-                box-class="border" class="backdrop-blur">
+                class="backdrop-blur">
                 <x-slot:actions>
                     <a href="/print-reseller/{{ $hidden_trans_id }}" target="_blank" rel="noopener noreferrer"
                         class="btn btn-primary">Cetak</a>
@@ -590,7 +593,7 @@ new class extends Component {
                 <div class="pt-3.5">
                     <!-- TABLE  -->
                     <x-card shadow class="sm:p-0">
-                        <x-table :headers="$headersDetTrans" :rows="$detailTrans" :sort-by="$sortBy">
+                        <x-table show-empty-text empty-text="Belum ada Record Data, Tambahkan melalui tombol tambah di atas!"  :headers="$headersDetTrans" :rows="$detailTrans" :sort-by="$sortBy">
                             @scope('cell_product_qty', $detTrans)
                             <x-input class="w-10" wire:change="update({{ $detTrans->id }}, $event.target.value)"
                                 type="number" value="{{ $detTrans->product_qty }}" min="1" />

@@ -2,13 +2,12 @@
 
 namespace App\Models;
 
-use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
-class Transactions extends Model
+
+class TempTransaction extends Model
 {
-    //
     protected $fillable = [
         'customer_id',
         'transaction_pay_type',
@@ -21,6 +20,12 @@ class Transactions extends Model
         'customer_id',
         'reseller_id',
         'paid',
+        'transaction_number',
+        'customer_name',
+        'pay_status',
+        'staff_name',
+        'staff_id',
+        'id',
     ];
 
     public function details()
@@ -47,12 +52,6 @@ class Transactions extends Model
     {
         return Attribute::make(
             get: fn ($value) => Carbon::parse($value)->isoFormat('dddd, D MMMM Y'),
-        );
-    }
-    protected function TransactionDateTimeFormatted(): Attribute
-    {
-        return Attribute::make(
-            get: fn ($value) => Carbon::parse($value)->isoFormat('dddd, D MMMM Y HH:mm'),
         );
     }
 

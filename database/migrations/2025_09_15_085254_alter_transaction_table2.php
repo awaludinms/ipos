@@ -13,7 +13,7 @@ return new class extends Migration
     {
         //
         Schema::table("transactions", function (Blueprint $table) {
-            $table->integer("transaction_state")->unsigned()->nullable()->after("transaction_pay_type")->default(1); // (1) new, (2) done-payed, (3) credit
+            $table->integer("transaction_state")->unsigned()->nullable()->after("transaction_pay_type")->default(1); // (1) new, (2) done-payed, (3) credit, (4) DP
         });
     }
 

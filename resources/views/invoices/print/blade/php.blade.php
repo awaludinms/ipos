@@ -64,7 +64,7 @@
                         <td width="1">:</td>
                         <td width="30%">{{ date('H:i', strtotime($transaction->created_at)) }}</td>
                     </tr>
-                    <tr>0
+                    <tr>
                         <td width="1">Customer</td>
                         <td width="1">:</td>
                         <td width="30%">{{ $transaction->customer->name }}</td>
@@ -152,9 +152,9 @@
                                 <table style="width:98%">
                                     <tr>
                                         <td width="50%">
-                                            <div style="border:1px solid;padding:4px;">Pembayaran ke: 1<br><strong>
+                                            <div style="border:1px solid;padding:4px;">Pembayaran ke: {{ $pembayaran_ke }}<br><strong>
                                                     <div>
-                                                        {{ $transaction->grand_total == $transaction->paid ? 'Lunas' : 'Belum Lunas' }}
+                                                        {{ $transaction->grand_total <= $transaction->paid ? 'Lunas' : (($transaction->paid != 0) ? 'DP' : 'Belum Lunas') }}
                                                     </div>
                                                 </strong></div>
                                         </td>
