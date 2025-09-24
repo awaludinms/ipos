@@ -217,9 +217,9 @@ new class extends Component {
             <x-button label="Proses" icon="o-paper-airplane" class="w-full btn-primary" spinner="process"
                 wire:click="process" />
         </div> --}}
-        <div class="lg:col-span-2 col-span-16">
+        {{-- <div class="lg:col-span-2 col-span-16">
             <x-button label="Export" icon="o-arrow-down-tray" class="w-full btn-success" wire:click="export" />
-        </div>
+        </div> --}}
     </div>
 
     <div class="flex flex-col gap-3">

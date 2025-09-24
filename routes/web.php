@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Invoice\PrintInvoiceController;
+use App\Http\Controllers\Report\ExportReportController;
 use App\Livewire\Welcome;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
@@ -61,6 +62,9 @@ Route::middleware('auth')->group(function () {
     // Report
     Volt::route('/reports/sales', 'reports.sales');
     Volt::route('/reports/receivables', 'reports.receivables');
+    
+    Route::get('/report/export-sales', [ExportReportController::class,'sales']);
+    Route::get('/report/export-receivables', [ExportReportController::class,'receivables']);
     // ... more
 });
 

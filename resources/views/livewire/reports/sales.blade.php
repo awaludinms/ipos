@@ -5,6 +5,8 @@ use Illuminate\Database\Eloquent\Builder;
 use App\Models\TransactionDetails;
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
+use Barryvdh\DomPDF\Facade\Pdf;
+
 
 new class extends Component {
     use WithPagination;
@@ -152,6 +154,12 @@ new class extends Component {
     public function export()
     {
         // Export
+        $report = $this->report()->get();
+        $grand_total_report = number_format($this->report()->sum('product_subtotal'), 0, ',', '.');
+
+        $pdf = Pdf::loadView("reports.sales", compact('report', 'grand_total_report'));
+        return $pdf->download('report-' . date('Ymd-His') . '.pdf');
+
     }
 }; ?>
 
@@ -185,13 +193,13 @@ new class extends Component {
         <div class="lg:col-span-3 col-span-8">
             <x-select hint="Status" wire:model="select_status_id" :options="$status" />
         </div>
-        <div class="lg:col-span-2 col-span-16">
+        <div class="lg:col-span-4 col-span-16">
             <x-button label="Proses" icon="o-paper-airplane" class="w-full btn-primary" spinner="process"
                 wire:click="process" />
         </div>
-        <div class="lg:col-span-2 col-span-16">
+        {{-- <div class="lg:col-span-2 col-span-16">
             <x-button label="Export" icon="o-arrow-down-tray" class="w-full btn-success" wire:click="export" />
-        </div>
+        </div> --}}
     </div>
 
     <div class="flex flex-col gap-3">
