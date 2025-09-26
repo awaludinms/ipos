@@ -682,10 +682,12 @@ new class extends Component {
                             @scope('cell_product_name', $detTrans)
                             {!! nl2br($detTrans->product_name) !!}
                             @endscope
+                            @if (!$transDone)
                             @scope('cell_product_qty', $detTrans)
                             <x-input class="w-10" wire:change="update({{ $detTrans->id }}, $event.target.value)"
                                 type="number" value="{{ $detTrans->product_qty }}" min="1" />
                             @endscope
+                            @endif
 
                             @scope('actions', $product)
                             {{-- <x-button icon="o-pencil" wire:click="delete({{ $product['id'] }})"
