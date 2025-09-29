@@ -51,7 +51,7 @@
                         <td width="1">:</td>
                         <td width="30%">{{ $transaction_number }}</td>
                         <td>&nbsp;&nbsp;</td>
-                        <td width="1">Tgl</td>
+                        <td width="1">Tgl Pesan</td>
                         <td width="1">:</td>
                         <td width="30%">{{ date('d/m/Y', strtotime($transaction->created_at)) }}</td>
                     </tr>
@@ -68,6 +68,17 @@
                         <td width="1">Reseller</td>
                         <td width="1">:</td>
                         <td width="30%">{{ $transaction->reseller->name }}</td>
+                        <td>&nbsp;&nbsp;</td>
+                        <td width="1">Tgl Ambil</td>
+                        <td width="1">:</td>
+                        <td width="30%">{{ $taken_date == '-' ? '-' : date('d/m/Y', strtotime($taken_date)) }}</td>
+                    </tr>
+                    <tr>
+                        <td colspan="3"></td>
+                        <td>&nbsp;&nbsp;</td>
+                        <td width="1">Jam Ambil</td>
+                        <td width="1">:</td>
+                        <td width="30%">{{ $taken_time == '-' ? '-' : date('H:i', strtotime($taken_time)) }}</td>
                     </tr>
                 </table>
             <td>
@@ -83,7 +94,7 @@
                     <tr>
                         <td class="text-align:left !important;">Nama Produk</td>
                         <td>Harga</td>
-                        <td>Qty</td>
+                        <td>Jumlah</td>
                         <td>Subtotal</td>
                     </tr>
                     <tr>
@@ -110,7 +121,7 @@
                                 <table style="width:90% !important;border:0;border-collapse:0;cell-spacing:0"
                                     border="0">
                                     <tr>
-                                        <td width="40%">Grand Total</td>
+                                        <td width="40%">Jumlah keseluruhan</td>
                                         <td width="1">:</td>
                                         <td>Rp. {{ number_format($transaction->grand_total, 0, ',', '.') }}</td>
                                     </tr>
@@ -149,17 +160,17 @@
                     <tr>
                         <td colspan="4">
                             <center>
-                                <table style="width:98%">
+                                <table style="width:99%">
                                     <tr>
-                                        <td width="50%">
+                                        <td width="60%">
                                             <div style="border:1px solid;padding:4px;">Pembayaran ke: {{ $pembayaran_ke }}<br><strong>
                                                     <div>
                                                         {{ $transaction->grand_total <= $transaction->paid ? 'Lunas' : (($transaction->paid != 0) ? 'DP' : 'Belum Lunas') }}
                                                     </div>
                                                 </strong></div>
                                         </td>
-                                        <td width="20%">&nbsp;</td>
-                                        <td width="50%">Petugas<br>{{ $transaction->staff->name }}</td>
+                                        <td width="10%">&nbsp;</td>
+                                        <td width="30%">Petugas<br>{{ $transaction->staff->name }}</td>
                                     </tr>
                                 </table>
                             </center>

@@ -3,6 +3,7 @@
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\User;
+use App\Models\TransactionReceipts;
 use App\Models\Transactions;
 use App\Models\TransactionDetails;
 use App\Models\LastTransactionNumber;
@@ -84,6 +85,8 @@ new class extends Component {
     public int $current_editing = 0;
 
     public ?string $detail_notes = '';
+
+    public $taken_time, $taken_date;
 
     //
     public function products()
@@ -232,6 +235,13 @@ new class extends Component {
 
     }
 
+    public function config()
+    {
+        return [
+            'locale' => 'id'
+        ];
+    }
+
     public function with(): array
     {
         return [
@@ -246,7 +256,13 @@ new class extends Component {
             ],
             'grandTotal' => $this->grandTotal,
             'grandTotalCalc' => $this->grandTotalCalc,
-
+            'config1' => $this->config(),
+            'config2' => [
+                'enableTime' => true,
+                'noCalendar' => true,
+                'dateFormat' => "H:i",
+                'time_24hr' => true
+            ],
         ];
     }
 
@@ -358,8 +374,12 @@ new class extends Component {
                 'required',
                 Illuminate\Validation\Rule::notIn([0]),
             ],
+            'taken_date' => ['required'],
+            'taken_time' => ['required'],
         ], [
             'user_searchable_id' => 'Pelanggan tidak boleh kosong',
+            'taken_date' => 'Tanggal Ambil tidak boleh kosong',
+            'taken_time' => 'Waktu Ambil tidak boleh kosong',
         ]);
 
         $transaction_state = 1;
@@ -381,18 +401,29 @@ new class extends Component {
             LastTransactionNumber::insert(['transaction_id' => $this->hidden_trans_id]);
 
 
-            // add payment
-            if ($this->paid != 0) {
-                TransactionPayments::create([
-                    'transaction_id' => $this->hidden_trans_id,
-                    'amount' => $this->paid,
-                    'method' => $this->selectedMetodePembayaran,
-                    'trans_status' => ($this->paid != 0) ? ($this->paid < $this->grandTotalCalc ? 'DP' : 'Lunas') : 'Hutang',
-                    'created_at' => date('Y-m-d H:i:s'),
-                    'change_return' => $this->change_return,
-                    'staff_id' => Auth::user()->id,
-                ]);
-            }
+            // add payment even paid is 0 to record payments
+            // if ($this->paid != 0) {
+            $transaction_payment_id = TransactionPayments::insertGetId([
+                'transaction_id' => $this->hidden_trans_id,
+                'amount' => $this->paid,
+                'method' => ($this->paid) ? $this->selectedMetodePembayaran : 0,
+                'trans_status' => ($this->paid != 0) ? ($this->paid < $this->grandTotalCalc ? 'DP' : 'Lunas') : 'Hutang',
+                'created_at' => date('Y-m-d H:i:s'),
+                'change_return' => $this->change_return,
+                'staff_id' => Auth::user()->id,
+            ]);
+
+            Log::info('tr_paye_id' . $transaction_payment_id);
+
+            $taken_date = date('Y-m-d', strtotime($this->taken_date));
+            $taken_time = date('H:i:00', strtotime($this->taken_time));
+            TransactionReceipts::create([
+                'transaction_payment_id' => $transaction_payment_id,
+                'type' => 1,
+                'issued_by' => Auth::user()->id,
+                'issued_at' => date('Y-m-d H:i:s', strtotime($taken_date . $taken_time)),
+            ]);
+            // }
 
             DB::commit();
             $this->myModalProsesSelesai = true;
@@ -573,6 +604,15 @@ new class extends Component {
                         <div class="lg:col-span-2 col-span-4 content-end text-right">
                             <x-button class="mt-2" label="Tambah" @click="$wire.myModalPelanggan = true" icon="o-plus"
                                 class="btn-primary" />
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-8 gap-1">
+                        <div class="lg:col-span-4 col-span-4 ">
+                            <x-datepicker label="Tanggal Ambil" wire:model="taken_date" :config="$config1" />
+                        </div>
+                        <div class="lg:col-span-4 col-span-4 content-end">
+                            <x-datepicker label="Jam Ambil" wire:model="taken_time" :config="$config2" />
                         </div>
                     </div>
 

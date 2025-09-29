@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\LastTransactionNumber;
 use App\Models\TransactionDetails;
 use App\Models\TransactionPayments;
+use App\Models\TransactionReceipts;
 use App\Models\Transactions;
-use Illuminate\Http\Request;
+use Auth;
 use Barryvdh\DomPDF\Facade\Pdf;
+use DB;
 
 class PrintInvoiceController extends Controller
 {
@@ -25,11 +27,19 @@ class PrintInvoiceController extends Controller
         // foreach($det_trans as $detail) {
         //     print_r($detail);
         // }
-        $type="print";
+        $type = 'print';
 
-        $pembayaran_ke = TransactionPayments::where("transaction_id", $transction_id)->count();
-        
-        return view("invoices/print.blade.php", compact('transaction', 'det_trans', 'transaction_number', 'type', 'pembayaran_ke'));
+        $trans_payemnt = TransactionPayments::where('transaction_id', $transction_id);
+        $pembayaran_ke = $trans_payemnt->count();
+        // $pembayaran_ke = $transaction->paid ? $pembayaran_ke : 1;
+        // get latest payment id
+        $payment_id = $trans_payemnt->latest()->first()->id;
+        // get latest info of receipt saved
+        $receipt = TransactionReceipts::where('transaction_payment_id', $payment_id)->latest()->first();
+        $taken_date = ($receipt->issued_at != '1970-01-01 00:00:00') ? date('Y-m-d', strtotime($receipt->issued_at)) : '-';
+        $taken_time = ($receipt->issued_at != '1970-01-01 00:00:00') ? date('H:i:00', strtotime($receipt->issued_at)) : '-';
+
+        return view('invoices/print.blade.php', compact('transaction', 'det_trans', 'transaction_number', 'type', 'pembayaran_ke', 'taken_date', 'taken_time'));
     }
 
     public function reseller(Transactions $transaction)
@@ -44,11 +54,19 @@ class PrintInvoiceController extends Controller
         // foreach($det_trans as $detail) {
         //     print_r($detail);
         // }
-        $type="print";
+        $type = 'print';
 
-        $pembayaran_ke = TransactionPayments::where("transaction_id", $transction_id)->count();
+        $trans_payemnt = TransactionPayments::where('transaction_id', $transction_id);
+        $pembayaran_ke = $trans_payemnt->count();
+        // $pembayaran_ke = $transaction->paid ? $pembayaran_ke : 1;
+        // get latest payment id
+        $payment_id = $trans_payemnt->latest()->first()->id;
+        // get latest info of receipt saved
+        $receipt = TransactionReceipts::where('transaction_payment_id', $payment_id)->latest()->first();
+        $taken_date = ($receipt->issued_at != '1970-01-01 00:00:00') ? date('Y-m-d', strtotime($receipt->issued_at)) : '-';
+        $taken_time = ($receipt->issued_at != '1970-01-01 00:00:00') ? date('H:i:00', strtotime($receipt->issued_at)) : '-';
 
-        return view("invoices/print-reseller.blade.php", compact('transaction', 'det_trans', 'transaction_number', 'type', 'pembayaran_ke'));
+        return view('invoices/print-reseller.blade.php', compact('transaction', 'det_trans', 'transaction_number', 'type', 'pembayaran_ke', 'taken_date', 'taken_time'));
     }
 
     public function download(Transactions $transaction)
@@ -63,13 +81,32 @@ class PrintInvoiceController extends Controller
         // foreach($det_trans as $detail) {
         //     print_r($detail);
         // }
-        $type="download";
+        $type = 'download';
 
-        $pembayaran_ke = TransactionPayments::where("transaction_id", $transction_id)->count();
+        DB::beginTransaction();
+        try {
+
+            $trans_payemnt = TransactionPayments::where('transaction_id', $transction_id);
+            $pembayaran_ke = $trans_payemnt->count();
+            // $pembayaran_ke = $transaction->paid ? $pembayaran_ke : 1;
+            // get latest payment id
+            $payment_id = $trans_payemnt->latest()->first()->id;
+                        // add struk tipe download copy from latest receipt
+            // DB::insert("INSERT INTO transaction_receipts(issued_at,type, issued_by, created_at, transaction_payment_id) 
+            //     SELECT issued_at, 2 as type, " . Auth::user()->id . ", now() as created_at,
+            //     transaction_payment_id 
+            //     FROM transaction_receipts WHERE transaction_payment_id = $payment_id ORDER BY created_at LIMIT 1");
 
 
-        $pdf = Pdf::loadView("invoices/print.blade.php", compact('transaction', 'det_trans', 'transaction_number', 'type', 'pembayaran_ke'));
-        return $pdf->download('invoice-' . $transaction->customer->name . '-' . $transaction->transaction_number . '.pdf');
+            // get latest info of receipt saved
+            $receipt = TransactionReceipts::where('transaction_payment_id', $payment_id)->latest()->first();
+            $taken_date = ($receipt->issued_at != '1970-01-01 00:00:00') ? date('Y-m-d', strtotime($receipt->issued_at)) : '-';
+            $taken_time = ($receipt->issued_at != '1970-01-01 00:00:00') ? date('H:i:00', strtotime($receipt->issued_at)) : '-';
+        } catch (Exception $e) {
+        }
+        $pdf = Pdf::loadView('invoices/print.blade.php', compact('transaction', 'det_trans', 'transaction_number', 'type', 'pembayaran_ke', 'taken_date', 'taken_time'));
+
+        return $pdf->download('invoice-'.$transaction->customer->name.'-'.$transaction->transaction_number.'.pdf');
     }
 
     public function downloadReseller(Transactions $transaction)
@@ -84,10 +121,19 @@ class PrintInvoiceController extends Controller
         // foreach($det_trans as $detail) {
         //     print_r($detail);
         // }
-        $type="download";        
-        $pembayaran_ke = TransactionPayments::where("transaction_id", $transction_id)->count();
+        $type = 'download';
+        $trans_payemnt = TransactionPayments::where('transaction_id', $transction_id);
+        $pembayaran_ke = $trans_payemnt->count();
+        // $pembayaran_ke = $transaction->paid ? $pembayaran_ke : 1;
+        // get latest payment id
+        $payment_id = $trans_payemnt->latest()->first()->id;
+        // get latest info of receipt saved
+        $receipt = TransactionReceipts::where('transaction_payment_id', $payment_id)->latest()->first();
+        $taken_date = ($receipt->issued_at != '1970-01-01 00:00:00') ? date('Y-m-d', strtotime($receipt->issued_at)) : '-';
+        $taken_time = ($receipt->issued_at != '1970-01-01 00:00:00') ? date('H:i:00', strtotime($receipt->issued_at)) : '-';
 
-        $pdf = Pdf::loadView("invoices/print-reseller.blade.php", compact('transaction', 'det_trans', 'transaction_number', 'type', 'pembayaran_ke'));
-        return $pdf->download('invoice-' . $transaction->reseller->name . '-' . $transaction->transaction_number . '.pdf');
+        $pdf = Pdf::loadView('invoices/print-reseller.blade.php', compact('transaction', 'det_trans', 'transaction_number', 'type', 'pembayaran_ke', 'taken_date', 'taken_time'));
+
+        return $pdf->download('invoice-'.$transaction->reseller->name.'-'.$transaction->transaction_number.'.pdf');
     }
 }

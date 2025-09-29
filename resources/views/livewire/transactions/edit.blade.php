@@ -6,6 +6,7 @@ use App\Models\TransactionDetails;
 use App\Models\TempTransaction;
 use App\Models\TempTransactionDetail;
 use App\Models\TransactionPayments;
+use App\Models\TransactionReceipts;
 use App\Models\Customer;
 use App\Models\Reseller;
 use Illuminate\Database\Eloquent\Builder;
@@ -64,6 +65,7 @@ new class extends Component {
     public $paymentAmountFormatted;
     public $paidAmount;
 
+    public $taken_time, $taken_date;
 
     public function trans()
     {
@@ -134,6 +136,15 @@ new class extends Component {
             ->get();
     }
 
+    public function transactionReceipt()
+    {
+        return TransactionReceipts::query()
+            ->selectRaw("issued_at, issued_at as taken_date, issued_at as taken_time, issued_by, IF(type =1, 'Print', 'Download') as type")
+            ->whereHas('payment', function ($q) {
+                $q->where('transaction_id', $this->transaction->id);
+            })
+            ->get();
+    }
 
 
     public function headersDetTrans(): array
@@ -144,6 +155,16 @@ new class extends Component {
             ['key' => 'product_qty', 'label' => 'Qty', 'sortable' => false, 'class' => 'w-10'],
             ['key' => 'product_price', 'label' => 'Harga', 'sortable' => false, 'format' => ['currency', '0,.', '']],
             ['key' => 'product_subtotal', 'label' => 'Sub Total', 'sortable' => false, 'format' => ['currency', '0,.', '']],
+        ];
+    }
+
+    public function headersReceipt()
+    {
+        return [
+            ['key' => 'taken_date', 'label' => 'Tangal Ambil', 'sortable' => false],
+            ['key' => 'taken_time', 'label' => 'Jam Ambil', 'sortable' => false],
+            ['key' => 'staff.name', 'label' => 'Petugas', 'sortable' => false],
+            // ['key' => 'type', 'label' => 'Tipe', 'sortable' => false],
         ];
     }
 
@@ -358,8 +379,12 @@ new class extends Component {
         //         'required',
         //         Illuminate\Validation\Rule::notIn([0]),
         //     ],
+        //     'taken_date' => ['required'],
+        //     'taken_time' => ['required'],
         // ], [
         //     'paidAmount' => 'Nilai pembayaran tidak boleh kosong',
+        //     'taken_date' => 'Tanggal Ambil tidak boleh kosong',
+        //     'taken_time' => 'Waktu Ambil tidak boleh kosong',
         // ]);
 
         $transaction_state = ($this->paidAmount != 0) ? ($this->paidAmount < $this->paymentAmount ? 3 : 2) : 3;
@@ -377,17 +402,28 @@ new class extends Component {
                 ]);
 
             // add payment
-            if ($this->paidAmount != 0) {
-                TransactionPayments::create([
-                    'transaction_id' => $this->transaction->id,
-                    'amount' => $this->paidAmount,
-                    'method' => $this->selectedMetodePembayaran,
-                    'change_return' => $this->change_return,
-                    'trans_status' => ($this->paidAmount != 0) ? ($this->paidAmount < $this->paymentAmount ? 'DP' : 'Lunas') : 'Hutang',
-                    'created_at' => date('Y-m-d H:i:s'),
-                    'staff_id' => Auth::user()->id,
-                ]);
-            }
+            // if ($this->paidAmount != 0) {
+            $transaction_payment_id = TransactionPayments::insertGetId([
+                'transaction_id' => $this->transaction->id,
+                'amount' => $this->paidAmount,
+                'method' => $this->selectedMetodePembayaran,
+                'change_return' => $this->change_return,
+                'trans_status' => ($this->paidAmount != 0) ? ($this->paidAmount < $this->paymentAmount ? 'DP' : 'Lunas') : 'Hutang',
+                'created_at' => date('Y-m-d H:i:s'),
+                'staff_id' => Auth::user()->id,
+            ]);
+            // }
+            Log::info('tr_paye_id' . $transaction_payment_id);
+
+            $taken_date = ($this->taken_date != '') ? date('Y-m-d', strtotime($this->taken_date)) : null;
+            $taken_time = ($this->taken_time != '') ? date('H:i:00', strtotime($this->taken_time)) : null;
+            TransactionReceipts::create([
+                'transaction_payment_id' => $transaction_payment_id,
+                'type' => 1,
+                'issued_by' => Auth::user()->id,
+                'issued_at' => date('Y-m-d H:i:s', strtotime($taken_date . $taken_time)),
+            ]);
+
 
             $this->myModalProsesSelesai = true;
             $this->myModal2 = false;
@@ -398,18 +434,22 @@ new class extends Component {
                 // replace existing transaction detail
                 Transactions::find($this->transaction->id)
                     ->update([
-                    'grand_total' => $this->grandTotalCalc,
-                ]);
+                        'grand_total' => $this->grandTotalCalc,
+                    ]);
 
-                TransactionDetails::where('transaction_id', $this->transaction->id
-                    )->delete();
+                TransactionDetails::where(
+                    'transaction_id',
+                    $this->transaction->id
+                )->delete();
 
                 $sql = "INSERT INTO transaction_details SELECT * FROM temp_transaction_details WHERE temp_transaction_id = " . $this->transaction->id;
                 DB::insert($sql);
 
-                TempTransactionDetail::where('temp_transaction_id', $this->transaction->id
-                    )->delete();
-                
+                TempTransactionDetail::where(
+                    'temp_transaction_id',
+                    $this->transaction->id
+                )->delete();
+
                 TempTransaction::find($this->transaction->id)
                     ->delete();
             }
@@ -433,6 +473,13 @@ new class extends Component {
         $this->change_return = ($this->paidAmount - $this->paymentAmount < 0) ? 0 : $this->paidAmount - $this->paymentAmount;
     }
 
+    public function config()
+    {
+        return [
+            'locale' => 'id'
+        ];
+    }
+
     public function with()
     {
         return [
@@ -450,6 +497,15 @@ new class extends Component {
             ],
             'payments' => $this->payments(),
             'headersPayment' => $this->headersPayment(),
+            'receipts' => $this->transactionReceipt(),
+            'headersReceipt' => $this->headersReceipt(),
+            'config1' => $this->config(),
+            'config2' => [
+                'enableTime' => true,
+                'noCalendar' => true,
+                'dateFormat' => "H:i",
+                'time_24hr' => true
+            ],
         ];
     }
 
@@ -511,6 +567,15 @@ new class extends Component {
             <x-input label="Nominal Pembayaran" wire:model="paidAmount" wire:change="calculateChange"
                 placeholder="Nilai Pembayaran" prefix="Rp" />
             <x-input readonly label="Kembalian" placeholder="Nilai Pembayaran" wire:model="change_return" prefix="Rp" />
+
+            <div class="grid grid-cols-8 gap-1">
+                <div class="lg:col-span-4 col-span-4 ">
+                    <x-datepicker label="Tanggal Ambil" wire:model="taken_date" :config="$config1" />
+                </div>
+                <div class="lg:col-span-4 col-span-4 content-end">
+                    <x-datepicker label="Jam Ambil" wire:model="taken_time" :config="$config2" />
+                </div>
+            </div>
 
             <x-select label="Metode Pembayaran" wire:model="selectedMetodePembayaran" :options="$metodePembayaran"
                 icon="o-bars-arrow-down" />
@@ -615,7 +680,24 @@ new class extends Component {
                             spinner />
                     @endif
                 @endif
+            </div>
+        </x-slot:actions>
+    </x-header>
 
+    <!-- TABLE  -->
+    <x-card shadow>
+        <x-table show-empty-text empty-text="Belum ada Record Data, Tambahkan melalui tombol Bayar diatas!"
+            :headers="$headersPayment" :rows="$payments" :sort-by="$sortBy">
+            @scope('cell_transaction_state', $detTrans)
+            <x-badge :value="$detTrans->transaction_state == 2 ? 'Lunas' : 'Hutang'"
+                class="{{ ($detTrans->transaction_state == 2) ? 'badge-primary' : 'badge-error' }} badge-soft" />
+            @endscope
+        </x-table>
+    </x-card>
+
+    <x-header class="mt-6" title="Struk" separator>
+        <x-slot:actions>
+            <div class="gap-3">
                 @if($edit_status)
                     <a disabled href="/download/{{ $transaction->id }}" target="_blank" rel="noopener noreferrer"
                         class="btn btn-secondary">Unduh Struk</a>
@@ -642,11 +724,13 @@ new class extends Component {
 
     <!-- TABLE  -->
     <x-card shadow>
-        <x-table show-empty-text empty-text="Belum ada Record Data, Tambahkan melalui tombol tambah di atas!"
-            :headers="$headersPayment" :rows="$payments" :sort-by="$sortBy">
-            @scope('cell_transaction_state', $detTrans)
-            <x-badge :value="$detTrans->transaction_state == 2 ? 'Lunas' : 'Hutang'"
-                class="{{ ($detTrans->transaction_state == 2) ? 'badge-primary' : 'badge-error' }} badge-soft" />
+        <x-table show-empty-text empty-text="Belum ada Record Data, Tambahkan melalui tombol Bayar diatas!"
+            :headers="$headersReceipt" :rows="$receipts" :sort-by="$sortBy">
+            @scope('cell_taken_date', $receipt)
+                {{ $receipt->issued_at == '1970-01-01 00:00:00' ? 'Idem' : $receipt->taken_date }}
+            @endscope
+            @scope('cell_taken_time', $receipt)
+                {{ $receipt->issued_at == '1970-01-01 00:00:00' ? 'Idem' : $receipt->taken_time }}
             @endscope
         </x-table>
     </x-card>
