@@ -62,7 +62,7 @@
                         <td>&nbsp;&nbsp;</td>
                         <td width="1">Jam</td>
                         <td width="1">:</td>
-                        <td width="30%">{{ date('H:i', strtotime($transaction->created_at)) }}</td>
+                        <td width="30%">{{ date('H:i') }}</td>
                     </tr>
                     <tr>
                         <td width="1">Reseller</td>
