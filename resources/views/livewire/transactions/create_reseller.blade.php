@@ -354,13 +354,14 @@ new class extends Component {
             'address.required' => 'Alamat tidak boleh kosong',
         ]);
 
-        Reseller::create([
+        $resid= Reseller::insertGetId([
             'name' => $this->name,
             'phone' => $this->phone,
             'address' => $this->address,
         ]);
 
-        // $this->search();
+        $this->user_searchable_id = $resid;
+        $this->searchData();
         $this->myModalReseller = false;
         $this->success("Reseller berhasil disimpan", "silahkan pilih reseller di pilihan reseller");
     }

@@ -354,13 +354,14 @@ new class extends Component {
             'address.required' => 'Alamat tidak boleh kosong',
         ]);
 
-        Customer::create([
+        $resid = Customer::insertGetId([
             'name' => $this->name,
             'phone' => $this->phone,
             'address' => $this->address,
         ]);
 
-        // $this->search();
+        $this->user_searchable_id = $resid;
+        $this->searchData();
         $this->myModalPelanggan = false;
 
         $this->success("Customer berhasil disimpan", "silahkan pilih pelanggan di pilihan customer");
