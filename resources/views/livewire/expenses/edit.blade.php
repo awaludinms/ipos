@@ -24,8 +24,13 @@ new class extends Component {
 
     public function mount(): void
     {
+        if (Auth::user()->role_id != 4) {
+            redirect('/transactions/');
+        }
+
         // $this->expenses_date = $this->expense->expenses_date;
         $this->fill($this->expense);
+        
     }
 
     public function save(): void

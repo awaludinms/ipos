@@ -52,6 +52,13 @@ new class extends Component {
             'headers' => $this->headers()
         ];
     }
+
+    public function mount()
+    {
+        if (Auth::user()->role_id != 4) {
+            redirect('/transactions/');
+        }
+    }
 }; ?>
 
 <div>

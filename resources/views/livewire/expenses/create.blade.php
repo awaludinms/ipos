@@ -22,6 +22,9 @@ new class extends Component {
 
     public function mount(): void
     {
+        if (Auth::user()->role_id != 4) {
+            redirect('/transactions/');
+        }
         // $this->product = new Product();
         // $this->fill($this->product);
     }

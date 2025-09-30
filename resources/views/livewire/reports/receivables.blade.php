@@ -35,7 +35,11 @@ new class extends Component {
     }
 
     public function mount()
-    {
+    {        
+        if (Auth::user()->role_id != 4) {
+            redirect('/transactions/');
+        }
+
         $this->start_date = date('Y-m-d H:i:s');
         $this->end_date = date('Y-m-d H:i:s');
         $this->select_type_id = -1;
