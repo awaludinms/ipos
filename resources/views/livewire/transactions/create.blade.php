@@ -336,7 +336,7 @@ new class extends Component {
 
         $this->usersSearchable = Customer::query()
             ->where('name', 'like', "%$value%")
-            ->take(5)
+            ->take(45)
             ->orderBy('name')
             ->get()
             ->merge($selectedOption);     // <-- Adds selected option
