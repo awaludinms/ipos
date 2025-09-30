@@ -733,6 +733,7 @@ new class extends Component {
                             @endscope
                             @endif
 
+                            @if (!$transDone)
                             @scope('actions', $product)
                             {{-- <x-button icon="o-pencil" wire:click="delete({{ $product['id'] }})"
                                 wire:confirm="Are you sure?" spinner class="btn-ghost btn-sm text-error" /> --}}
@@ -748,6 +749,7 @@ new class extends Component {
                                     spinner="delete({{ $product['id'] }})" />
                             </x-dropdown>
                             @endscope
+                            @endif
                         </x-table>
                     </x-card>
                 </div>
