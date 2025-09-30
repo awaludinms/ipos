@@ -225,8 +225,9 @@ new class extends Component {
         $this->customer_name = '';
         $this->transaction_date = date('1900-01-01');
         $this->transaction_pay_type = '';
+        $this->searchData('');
 
-        $this->search();
+        // $this->search();
 
         // remove not process transaction (state new) within more than 24 hours
         Transactions::whereRaw('DATE_ADD(created_at, INTERVAL 24 HOUR) <= CURRENT_DATE()')
@@ -263,6 +264,7 @@ new class extends Component {
                 'dateFormat' => "H:i",
                 'time_24hr' => true
             ],
+            'usersSearchable' => [],
         ];
     }
 
@@ -292,7 +294,9 @@ new class extends Component {
 
     public function calculateChange()
     {
+        if ($this->paid) {
         $this->change_return = ($this->paid - $this->grandTotalCalc < 0) ? 0 : $this->paid - $this->grandTotalCalc;
+        }
     }
 
     // Delete action
@@ -325,7 +329,7 @@ new class extends Component {
     }
 
     // Also called as you type
-    public function search(string $value = '')
+    public function searchData(string $value = '')
     {
         // Besides the search results, you must include on demand selected option
         $selectedOption = Reseller::where('id', $this->user_searchable_id)->get();
@@ -596,7 +600,7 @@ new class extends Component {
                     <div class="grid grid-cols-8 gap-1">
                         <div class="lg:col-span-6 col-span-4 ">
                             <x-choices label="Reseller" wire:model="user_searchable_id" :options="$usersSearchable"
-                                placeholder="Search ..." single searchable />
+                                placeholder="Search ..." single searchable debounce="300ms" search-function="searchData" />
                         </div>
                         <div class="lg:col-span-2 col-span-4 content-end text-right">
                             <x-button class="mt-2" label="Tambah" @click="$wire.myModalReseller = true" icon="o-plus"
