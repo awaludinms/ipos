@@ -360,7 +360,7 @@ new class extends Component {
             'address' => $this->address,
         ]);
 
-        $this->search();
+        // $this->search();
         $this->myModalReseller = false;
         $this->success("Reseller berhasil disimpan", "silahkan pilih reseller di pilihan reseller");
     }
