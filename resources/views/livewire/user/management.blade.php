@@ -56,6 +56,12 @@ new class extends Component {
                         'name' => 'required',
                         'email_user' => 'required|unique:users,email,' . $this->user_id
                     ]);
+
+                    User::find($this->user_id)->update([
+                        'name' => $this->name,
+                        'email' => $this->email_user,
+                    ]);
+
                 } else {
                     $this->validate([
                         'name' => 'required',
@@ -63,12 +69,14 @@ new class extends Component {
                         'password_user' => 'required|min:8|confirmed',
                         'password_user_confirmation' => 'required'
                     ]);
+
+                    User::find($this->user_id)->update([
+                        'name' => $this->name,
+                        'email' => $this->email_user,
+                        'password' => Hash::make($this->password_user)
+                    ]);
                 }
 
-                User::find($this->user_id)->update([
-                    'name' => $this->name,
-                    'email' => $this->email_user,
-                ]);
 
                 $this->user_id = -1;
 
@@ -104,7 +112,7 @@ new class extends Component {
     public function users()
     {
         return User::where('id', '!=', 1)
-            ->when($this->search, function(Builder $q) {
+            ->when($this->search, function (Builder $q) {
                 $q->where('email', 'like', "%$this->search%");
                 $q->orWhere('name', 'like', "%$this->search%");
             })
@@ -171,7 +179,8 @@ new class extends Component {
 
     <!-- TABLE  -->
     <x-card shadow>
-        <x-table show-empty-text empty-text="Belum ada Record Data, Tambahkan melalui tombol tambah di atas!"  with-pagination :headers="$headers" :rows="$users" :sort-by="$sortBy"
+        <x-table show-empty-text empty-text="Belum ada Record Data, Tambahkan melalui tombol tambah di atas!"
+            with-pagination :headers="$headers" :rows="$users" :sort-by="$sortBy"
             @row-click="$wire.edit($event.detail.id)">
             @scope('actions', $user)
             {{-- <x-button icon="o-pencil" wire:click="delete({{ $user['id'] }})" wire:confirm="Are you sure?" spinner
