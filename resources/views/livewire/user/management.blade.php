@@ -59,7 +59,7 @@ new class extends Component {
                 } else {
                     $this->validate([
                         'name' => 'required',
-                        'email_user' => 'required|email|unique:users,email',
+                        'email_user' => 'required|email|unique:users,email,' . $this->userr_id,
                         'password_user' => 'required|min:8|confirmed',
                         'password_user_confirmation' => 'required'
                     ]);
