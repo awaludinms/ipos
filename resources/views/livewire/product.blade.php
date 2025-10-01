@@ -10,7 +10,7 @@ use Livewire\WithPagination;
 use Mary\Traits\Toast;
 
 new class extends Component {
-    use WithPagination; 
+    use WithPagination;
     use Toast;
 
     public string $search = '';
@@ -18,11 +18,17 @@ new class extends Component {
     public bool $drawer = false;
 
     public array $sortBy = ['column' => 'id', 'direction' => 'asc'];
+
+    public int $select_type_id = -1;
+
     //
     public function products()
     {
         return Product::query()->selectRaw('id, product_name, customer_price, reseller_price, product_type_id')
             ->when($this->search, fn(Builder $q) => $q->where('product_name', 'like', "%$this->search%"))
+            ->when($this->select_type_id, function($q){
+                ($this->select_type_id != -1 ) ? $q->where('product_type_id', $this->select_type_id) : null;
+            })
             ->orderBy(...array_values($this->sortBy))
             ->paginate(10);
     }
@@ -43,7 +49,13 @@ new class extends Component {
     {
         return [
             'products' => $this->products(),
-            'headers' => $this->headers()
+            'headers' => $this->headers(),
+            'product_types' => array_merge([
+                [
+                    'id' => -1,
+                    'name' => 'Semua'
+                ]
+            ], App\Models\ProductType::all()->toArray()),
         ];
     }
 
@@ -69,17 +81,22 @@ new class extends Component {
             <x-input placeholder="Cari..." wire:model.live.debounce="search" clearable icon="o-magnifying-glass" />
         </x-slot:middle>
         <x-slot:actions>
-            <x-button label="Filters" @click="$wire.drawer = true" responsive icon="o-funnel" />
+            {{-- <x-button label="Filters" @click="$wire.drawer = true" responsive icon="o-funnel" /> --}}
+            <div class="lg:col-span-3 col-span-8">
+                <x-select wire:model="select_type_id" :options="$product_types" wire:change="products"/>
+
+            </div>
             <x-button label="Tambah" link="/products/create" responsive icon="o-plus" class="btn-primary" />
         </x-slot:actions>
     </x-header>
 
     <!-- TABLE  -->
     <x-card shadow>
-        <x-table show-empty-text empty-text="Belum ada Record Data, Tambahkan melalui tombol tambah di atas!"  with-pagination :headers="$headers" :rows="$products" :sort-by="$sortBy" link="/products/{id}/edit">
+        <x-table show-empty-text empty-text="Belum ada Record Data, Tambahkan melalui tombol tambah di atas!"
+            with-pagination :headers="$headers" :rows="$products" :sort-by="$sortBy" link="/products/{id}/edit">
             @scope('actions', $user)
-            {{-- <x-button icon="o-pencil" wire:click="delete({{ $user['id'] }})" wire:confirm="Are you sure?" spinner --}}
-            {{-- class="btn-ghost btn-sm text-error" /> --}}
+            {{-- <x-button icon="o-pencil" wire:click="delete({{ $user['id'] }})" wire:confirm="Are you sure?" spinner
+                --}} {{-- class="btn-ghost btn-sm text-error" /> --}}
             <x-button icon="o-trash" wire:click="delete({{ $user['id'] }})" wire:confirm="Are you sure?" spinner
                 class="btn-ghost btn-sm text-error" />
             @endscope
