@@ -323,6 +323,20 @@ new class extends Component {
         // prepare for temp table
         $transaction = $this->transaction;
 
+        // check existance of temp transaction by given id
+        $exists = TempTransaction::where('id', $transaction->id)->exists();
+
+        if ($exists) {
+            TempTransactionDetail::where(
+                    'temp_transaction_id',
+                    $transaction->id
+                )->delete();
+
+            $temp_transaction = TempTransaction::find($transaction->id);
+            
+            $temp_transaction->delete();
+        }
+
         TempTransaction::create([
             'id' => $transaction->id,
             'transaction_number' => $transaction->transaction_number,
@@ -437,12 +451,20 @@ new class extends Component {
                         'grand_total' => $this->grandTotalCalc,
                     ]);
 
-                TransactionDetails::where(
-                    'transaction_id',
-                    $this->transaction->id
-                )->delete();
+                try {
+                    TransactionDetails::where(
+                        'transaction_id',
+                        $this->transaction->id
+                    )->delete();
+                } catch (\Exception $e) {
+                    $this->error("Gagal Simpan Transaksi" . json_encode($e->getMessage()), "hapus detail transaksi");
+                }
 
-                $sql = "INSERT INTO transaction_details SELECT * FROM temp_transaction_details WHERE temp_transaction_id = " . $this->transaction->id;
+                $column = 'transaction_id, product_id, product_qty, product_price, product_subtotal, deleted_by, deleted_at, created_by, updated_by,
+                    created_at, updated_at, product_name, notes';
+                $column_from = 'temp_transaction_id, product_id, product_qty, product_price, product_subtotal, deleted_by, deleted_at, created_by, updated_by,
+                    created_at, updated_at, product_name, notes';
+                $sql = "INSERT INTO transaction_details($column) SELECT $column_from FROM temp_transaction_details WHERE temp_transaction_id = " . $this->transaction->id;
                 DB::insert($sql);
 
                 TempTransactionDetail::where(
