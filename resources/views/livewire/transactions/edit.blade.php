@@ -71,7 +71,7 @@ new class extends Component {
     {
         return Transactions::query()
             ->selectRaw("transactions.id as id, if(customer_type = 'reseller', reseller.name, customer.name) as customer_name, 
-                transactions.created_at as transaction_date_time_formatted, grand_total, transaction_state, paid, (grand_total - paid) as credit,
+                transactions.transaction_date as transaction_date_time_formatted, grand_total, transaction_state, paid, (grand_total - paid) as credit,
                 customer_type, last_transaction_numbers.id as note_id, change_return")
             ->leftJoin('customer', 'customer.id', '=', 'customer_id')
             ->leftJoin('reseller', 'reseller.id', '=', 'reseller_id')
@@ -389,14 +389,9 @@ new class extends Component {
     public function saveTransaction()
     {
         // $this->validate([
-        //     'paidAmount' => [
-        //         'required',
-        //         Illuminate\Validation\Rule::notIn([0]),
-        //     ],
         //     'taken_date' => ['required'],
         //     'taken_time' => ['required'],
         // ], [
-        //     'paidAmount' => 'Nilai pembayaran tidak boleh kosong',
         //     'taken_date' => 'Tanggal Ambil tidak boleh kosong',
         //     'taken_time' => 'Waktu Ambil tidak boleh kosong',
         // ]);
@@ -415,6 +410,15 @@ new class extends Component {
                     'updated_at' => date('Y-m-d H:i:s')
                 ]);
 
+            $trans_payment = TransactionPayments::where('transaction_id', $this->transaction->id)->latest()->first();
+
+            $trans_receipt = null;
+
+            if ($trans_payment != null) {
+                Log::info('trans_payment_id: '. $trans_payment->id);
+                $trans_receipt = TransactionReceipts::where('transaction_payment_id', $trans_payment->id)->first(); 
+            }
+
             // add payment
             // if ($this->paidAmount != 0) {
             $transaction_payment_id = TransactionPayments::insertGetId([
@@ -429,8 +433,13 @@ new class extends Component {
             // }
             Log::info('tr_paye_id' . $transaction_payment_id);
 
-            $taken_date = ($this->taken_date != '') ? date('Y-m-d', strtotime($this->taken_date)) : null;
-            $taken_time = ($this->taken_time != '') ? date('H:i:00', strtotime($this->taken_time)) : null;
+
+            $prev_taken_date = ($trans_receipt != null) ? date('Y-m-d', strtotime($trans_receipt->issued_at)) : null;
+            $prev_taken_time = ($trans_receipt != null) ? date('H:i', strtotime($trans_receipt->issued_at)) : null;
+
+            $taken_date = ($this->taken_date != '') ? date('Y-m-d', strtotime($this->taken_date)) : $prev_taken_date;
+            $taken_time = ($this->taken_time != '') ? date('H:i:00', strtotime($this->taken_time)) : $prev_taken_time;
+
             TransactionReceipts::create([
                 'transaction_payment_id' => $transaction_payment_id,
                 'type' => 1,

@@ -53,7 +53,7 @@
                         <td>&nbsp;&nbsp;</td>
                         <td width="1">Tgl Pesan</td>
                         <td width="1">:</td>
-                        <td width="30%">{{ date('d/m/Y', strtotime($transaction->created_at)) }}</td>
+                        <td width="30%">{{ date('d/m/Y', strtotime($transaction->transaction_date)) }}</td>
                     </tr>
                     <tr>
                         <td width="1">Tel/HP</td>
@@ -62,7 +62,7 @@
                         <td>&nbsp;&nbsp;</td>
                         <td width="1">Jam</td>
                         <td width="1">:</td>
-                        <td width="30%">{{ date('H:i') }}</td>
+                        <td width="30%">{{ date('H:i', strtotime($transaction->transaction_date)) }}</td>
                     </tr>
                     <tr>
                         <td width="1">Pelanggan</td>

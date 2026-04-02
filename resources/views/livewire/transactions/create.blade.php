@@ -86,7 +86,7 @@ new class extends Component {
 
     public ?string $detail_notes = '';
 
-    public $taken_time, $taken_date;
+    public $taken_time, $taken_date, $order_date, $order_time;
 
     //
     public function products()
@@ -379,10 +379,14 @@ new class extends Component {
             ],
             'taken_date' => ['required'],
             'taken_time' => ['required'],
+            'order_date' => ['required'],
+            'order_time' => ['required'],
         ], [
             'user_searchable_id' => 'Pelanggan tidak boleh kosong',
             'taken_date' => 'Tanggal Ambil tidak boleh kosong',
             'taken_time' => 'Waktu Ambil tidak boleh kosong',
+            'order_date' => 'Tanggal Pesan tidak boleh kosong',
+            'order_time' => 'Waktu Pesan tidak boleh kosong',
         ]);
 
         $transaction_state = 1;
@@ -390,6 +394,10 @@ new class extends Component {
 
         DB::beginTransaction();
         try {
+            $order_date = date('Y-m-d', strtotime($this->order_date));
+            $order_time = date('H:i:00', strtotime($this->order_time));
+            $transaction_date = strtotime($order_date . ' ' . $order_time);
+
             Transactions::find($this->hidden_trans_id)
                 ->update([
                     'customer_id' => $this->user_searchable_id,
@@ -398,7 +406,7 @@ new class extends Component {
                     'change_return' => $this->change_return,
                     'grand_total' => $this->grandTotalCalc,
                     'staff_id' => Auth::user()->id,
-                    'transaction_date' => date('Y-m-d H:i:s'),
+                    'transaction_date' => date('Y-m-d H:i:s', $transaction_date),
                     'paid' => $this->paid,
                 ]);
             LastTransactionNumber::insert(['transaction_id' => $this->hidden_trans_id]);
@@ -607,6 +615,15 @@ new class extends Component {
                         <div class="lg:col-span-2 col-span-4 content-end text-right">
                             <x-button class="mt-2" label="Tambah" @click="$wire.myModalPelanggan = true" icon="o-plus"
                                 class="btn-primary" />
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-8 gap-1">
+                        <div class="lg:col-span-4 col-span-4 ">
+                            <x-datepicker label="Tanggal Pesan" wire:model="order_date" :config="$config1" />
+                        </div>
+                        <div class="lg:col-span-4 col-span-4 content-end">
+                            <x-datepicker label="Jam Pesan" wire:model="order_time" :config="$config2" />
                         </div>
                     </div>
 

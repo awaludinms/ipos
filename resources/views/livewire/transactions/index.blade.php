@@ -35,7 +35,7 @@ new class extends Component {
     {
         return Transactions::query()
             ->selectRaw("transactions.id as id, if(customer_type = 'reseller', reseller.name, customer.name) as customer_name, 
-                transactions.created_at as transaction_date_formatted, grand_total, transaction_state,
+                transactions.transaction_date as transaction_date_formatted, grand_total, transaction_state,
                 customer_type, last_transaction_numbers.id as note_id")
             ->leftJoin('customer', 'customer.id', '=', 'customer_id')
             ->leftJoin('reseller', 'reseller.id', '=', 'reseller_id')
