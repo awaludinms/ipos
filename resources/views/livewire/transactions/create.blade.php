@@ -455,6 +455,8 @@ new class extends Component {
     public function addCustomProduct()
     {
         $grandTotal = 0;
+        Log::info('hidden trans_id: '. $this->hidden_trans_id);
+
         if ($this->hidden_trans_id == -1) {
             try {
                 $data = [
@@ -485,7 +487,7 @@ new class extends Component {
                     'product_name' => $this->product_custom_name,
                     'product_price' => (Double) $this->product_custom_price,
                     'notes' => $this->product_custom_notes,
-                    'product_subtotal' => $this->product_custom_qty * (int) $this->product_custom_price,
+                    'product_subtotal' => (int) $this->product_custom_qty * (int) $this->product_custom_price,
                     'created_by' => Auth::user()->id,
                     'created_at' => date('Y-m-d H:i:s')
                 ]);
@@ -498,10 +500,11 @@ new class extends Component {
             } catch (\Exception $e) {
                 Log::debug(json_encode($e->getMessage()));
                 $this->warning(json_encode($e->getMessage()) . 'Err.', position: 'toast-bottom');
-                // $this->warning(json_encode($e->getMessage()));
+                $this->warning(json_encode($e->getMessage()));
             }
         } else {
-            // $this->warning('----' . 'It is fake.', position: 'toast-bottom');
+            $this->warning('----' . 'It is fake.', position: 'toast-bottom');
+            Log::info("in this");
 
             TransactionDetails::create([
                 'transaction_id' => $this->hidden_trans_id,
@@ -682,7 +685,8 @@ new class extends Component {
 
                     <x-input label="Nama Produk" wire:model="product_custom_name" required />
                     <x-input type="number" min="1" label="Qty" wire:model="product_custom_qty" />
-                    <x-input money prefix="Rp" label="Harga Produk" wire:model="product_custom_price" />
+                    {{-- <x-input money prefix="Rp" label="Harga Produk" wire:model="product_custom_price" /> --}}
+                    <x-input label="Harga Produk" wire:model="product_custom_price" />
                     <x-textarea label="Keterangan" wire:model="product_custom_notes" />
 
                     <x-slot:actions>
