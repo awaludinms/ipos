@@ -182,7 +182,7 @@
         <tr>
             <td>
                 <div>Keterangan</div>
-                {{  $transaction->keterangan }}
+                <strong><?php echo nl2br($transaction->keterangan) ?></strong>
             </td>
         </tr>
     </table>

@@ -21,6 +21,7 @@ class Transactions extends Model
         'customer_id',
         'reseller_id',
         'paid',
+        'keterangan',
     ];
 
     public function details()

@@ -233,6 +233,8 @@ new class extends Component {
         Transactions::whereRaw('DATE_ADD(created_at, INTERVAL 24 HOUR) <= CURRENT_DATE()')
             ->where('transaction_state', 1)
             ->delete();
+        
+        $this->keterangan = "Pembayaran Transfer BCA 1710903715\n           ( NOVIANDI )";
 
     }
 
@@ -406,6 +408,7 @@ new class extends Component {
                     'staff_id' => Auth::user()->id,
                     'transaction_date' => date('Y-m-d H:i:s', $transaction_date),
                     'paid' => $this->paid,
+                    'keterangan' => $this->keterangan,
                 ]);
             LastTransactionNumber::insert(['transaction_id' => $this->hidden_trans_id]);
 
@@ -682,7 +685,8 @@ new class extends Component {
 
                     <x-input label="Nama Produk" wire:model="product_custom_name" />
                     <x-input type="number" min="1" label="Qty" wire:model="product_custom_qty" />
-                    <x-input money prefix="Rp" label="Harga Produk" wire:model="product_custom_price" />
+                    {{-- <x-input money prefix="Rp" label="Harga Produk" wire:model="product_custom_price" /> --}}
+                    <x-input prefix="Rp" label="Harga Produk" wire:model="product_custom_price" />
                     <x-textarea label="Keterangan" wire:model="product_custom_notes" />
 
                     <x-slot:actions>
