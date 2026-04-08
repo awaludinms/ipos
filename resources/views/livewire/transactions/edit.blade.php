@@ -639,7 +639,7 @@ new class extends Component {
 
             <x-input label="Nama Produk" wire:model="product_custom_name" required />
             <x-input type="number" min="1" label="Qty" wire:model="product_custom_qty" />
-            <x-input money prefix="Rp" label="Harga Produk" wire:model="product_custom_price" />
+            <x-input prefix="Rp" label="Harga Produk" wire:model="product_custom_price" />
             <x-textarea label="Keterangan" wire:model="product_custom_notes" />
 
             <x-slot:actions>
