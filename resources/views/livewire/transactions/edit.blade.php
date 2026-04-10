@@ -307,6 +307,20 @@ new class extends Component {
         }
     }
 
+    public function delete($id)
+    {
+        $det = TempTransactionDetail::find($id);
+        if ($det != null) {
+            $this->current_editing = $id;
+            try {
+                $det->delete();
+                $this->success("Produk berhasil dihapus");
+            } catch (\Exception $e) {
+                $this->error("Produk gagal dihapus.");
+            }
+        }
+    }
+
     public function saveNote()
     {
         TempTransactionDetail::find($this->current_editing)
