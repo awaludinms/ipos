@@ -35,10 +35,27 @@ new class extends Component {
         $data = $this->validate();
         // print_r($data);
         $data['buy_price'] = 0;
+        $data['customer_price'] = $this->parseFormattedToInteger($data['customer_price']);
+        $data['reseller_price'] = $this->parseFormattedToInteger($data['reseller_price']);
         Product::create($data);
 
         $this->success("Data Produk berhasil dimasukkan", redirectTo: '/product');
 
+    }
+
+    /**
+     * Mengonversi string angka berformat menjadi integer murni.
+     *
+     * @param string $formattedNumber String input (contoh: "2,000.00")
+     * @return int Nilai angka dalam bentuk integer
+     */
+    public function parseFormattedToInteger(string $formattedNumber): int {
+        // Langkah 1: Hapus karakter pemisah ribuan (koma)
+        $sanitizedString = str_replace(',', '', $formattedNumber);
+        
+        // Langkah 2: Konversi ke float untuk membaca nilai desimal dengan aman,
+        // lalu konversi ke integer untuk membuang fraksi desimal (.00).
+        return (int) (float) $sanitizedString;
     }
 
     public function with()
@@ -57,10 +74,10 @@ new class extends Component {
             <x-input label="Nama Produk" wire:model="product_name" />
             <div class="lg:grid grid-cols-6 gap-3">
                 <div class="col-span-3">
-                    <x-input label="Harga Customer" wire:model="customer_price" money prefix="Rp"/>
+                    <x-input label="Harga Customer" wire:model="customer_price" prefix="Rp"/>
                 </div>
                 <div class="col-span-3">
-                    <x-input label="Harga Reseller" wire:model="reseller_price" money prefix="Rp"/>
+                    <x-input label="Harga Reseller" wire:model="reseller_price" prefix="Rp"/>
                 </div>
             </div>
             <x-select label="Kategori" wire:model="product_type_id" :options="$product_type" placeholder="---" />

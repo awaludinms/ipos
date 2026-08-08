@@ -56,10 +56,10 @@ new class extends Component {
             <x-input label="Nama Produk" wire:model="product_name" />
             <div class="lg:grid grid-cols-6 gap-3">
                 <div class="col-span-3">
-                    <x-input label="Harga Customer" wire:model="customer_price" money prefix="Rp"/>
+                    <x-input label="Harga Customer" wire:model="customer_price" prefix="Rp"/>
                 </div>
                 <div class="col-span-3">
-                    <x-input label="Harga Reseller" wire:model="reseller_price" money prefix="Rp"/>
+                    <x-input label="Harga Reseller" wire:model="reseller_price" prefix="Rp"/>
                 </div>
             </div>
             <x-select label="Kategori" wire:model="product_type_id" :options="$product_type" placeholder="---" />
