@@ -50,7 +50,7 @@ new class extends Component {
             <x-textarea label="Deskrispi" wire:model="description" />
 
             <x-input label="Personal" wire:model="person" />
-            <x-input label="Nilai Pengeluaran" wire:model="expense_value" prefix="Rp" money />
+            <x-input label="Nilai Pengeluaran" wire:model="expense_value" prefix="Rp" />
 
             <x-slot:actions>
                 <x-button label="Cancel" link="/expenses" />
