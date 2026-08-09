@@ -234,7 +234,8 @@ new class extends Component {
             ->where('transaction_state', 1)
             ->delete();
         
-        $this->keterangan = "Pembayaran Transfer BCA 1710903715\n           ( NOVIADI )";
+        // $this->keterangan = "Pembayaran Transfer BCA 1710903715\n           ( NOVIADI )";
+        $this->keterangan = "";
 
     }
 
