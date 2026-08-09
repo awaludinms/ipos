@@ -713,10 +713,11 @@ new class extends Component {
             </x-modal>
 
 
-            <div class="col-span-4">
+            <div class="col-span-6">
                 <x-header title="Transaksi" separator progress-indicator>
                     <x-slot:actions>
-                        <div class="flex flex-wrap gap-3">
+                        {{-- <div class="flex flex-wrap gap-3"> --}}
+                        <div class="md:flex md:flex-wrap gap-3 grid grid-cols-2">
                             @if ($transDone)
                                 <x-button label="Tansaksi Baru" link="/transactions/create" icon="o-plus"
                                     class="grow btn-success" spinner />
